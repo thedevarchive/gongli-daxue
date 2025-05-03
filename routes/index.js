@@ -11,6 +11,7 @@ router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
+//get title of lessons 
 router.get("/lessons", async (req, res, next) => {
   const lessons = await req.db.from("lessons").orderBy("id");
   res.json({ lessons });
@@ -32,7 +33,7 @@ const pinyinPhrasesMC = [
   "Choose the correct word for {pinyin}.",
   "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
   "Determine which word aligns with this Pinyin reading: {pinyin}.",
-  "Encircle the letter next to the word with this Pinyin: {pinyin}.", 
+  "Encircle the letter next to the word with this Pinyin: {pinyin}.",
   "Which of the following is read as {pinyin}?"
 ]
 
@@ -74,10 +75,11 @@ const particlePhrasesWR = [
 ]
 
 async function generateQuestions(req) {
+  //get selected lesson id and worksheet details from client side
   const lessonId = Number(req.params.lessonId);
-
   const { pages, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
 
+  //get boolean values for each question type
   const isMP = match_pinyin === "true" ? 1 : 0;
   const isMM = match_meaning === "true" ? 1 : 0;
   const isFB = fill_blank === "true" ? 1 : 0;
@@ -229,8 +231,6 @@ async function generateQuestions(req) {
           .orderByRaw('RAND()')
           .limit(1);
 
-        console.log("vocab length:", vocab.length);
-
         vocab.map(async (v) => {
 
           let formatSelect = -1;
@@ -343,7 +343,21 @@ async function generateQuestions(req) {
     count++;
   }
   if (Boolean(isTC)) {
+    try {
+      questionsGenerated += questionTypeCounts[count];
+      while (questions.length < questionsGenerated) {
+        const trcn = await req.db.from("translation_questions")
+          .select("eng_sentence")
+          .andWhere("lesson_id", lessonId)
+          .orderByRaw('RAND()')
+          .limit(1);
 
+        questions.push("Translate the sentence(s) to Chinese. Names of people will be provided in the parenthesis.<br />&ensp;&ensp;&ensp;<strong>" + trcn[0].eng_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
+      }
+    } catch (error) {
+      console.error('Error fetching vocab:', error);
+    }
+    count++;
   }
 
   //finally, get lesson details 
@@ -360,7 +374,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const { title, questions } = await generateQuestions(req);
 
     const questionHtml = questions.map((q, i) => {
-      if(i < Number(req.headers.pages) * 10) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
+      if (i < Number(req.headers.pages) * 10) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
     }).join("");
 
     // Step 1: Construct full font path
@@ -382,7 +396,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '10mm', bottom: '15mm', left: '10mm', right: '10mm' }
+      margin: { top: '12mm', bottom: '15mm', left: '10mm', right: '10mm' }
     });
     await browser.close();
 
