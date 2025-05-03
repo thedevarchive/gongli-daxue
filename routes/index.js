@@ -32,7 +32,8 @@ const pinyinPhrasesMC = [
   "Choose the correct word for {pinyin}.",
   "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
   "Determine which word aligns with this Pinyin reading: {pinyin}.",
-  "Encircle the letter next to the word with this Pinyin: {pinyin}."
+  "Encircle the letter next to the word with this Pinyin: {pinyin}.", 
+  "Which of the following is read as {pinyin}?"
 ]
 
 const pinyinPhrasesWR = [
@@ -49,7 +50,8 @@ const meaningPhrasesMC = [
   "Choose the correct word that refers to \"{meaning}\".",
   "Which of these mean \"{meaning}\"?",
   "Identify the word that means \"{meaning}\" in English.",
-  "Encircle the letter next to the word that means {meaning}."
+  "Encircle the letter next to the word that means {meaning}.",
+  "Which of the following means {pinyin}?"
 ]
 
 const meaningPhrasesWR = [
