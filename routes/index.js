@@ -52,13 +52,13 @@ const meaningPhrasesMC = [
   "Which of these mean \"{meaning}\"?",
   "Identify the word that means \"{meaning}\" in English.",
   "Encircle the letter next to the word that means {meaning}.",
-  "Which of the following means {pinyin}?"
+  "Which of the following means {meaning}?"
 ]
 
 const meaningPhrasesWR = [
   "What word means {meaning}?",
   "Translate \"{meaning}\" to Chinese.",
-  "Write the Chinese character(s) for \"{meaning}\"."
+  "Write the Chinese term for \"{meaning}\"."
 ]
 
 const particlePhrasesMC = [
@@ -74,10 +74,10 @@ const particlePhrasesWR = [
   "What term is used as a(n) {meaning}?"
 ]
 
-async function generateQuestions(req) {
+async function generatequestionsArr(req) {
   //get selected lesson id and worksheet details from client side
   const lessonId = Number(req.params.lessonId);
-  const { pages, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
+  const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
 
   //get boolean values for each question type
   const isMP = match_pinyin === "true" ? 1 : 0;
@@ -85,34 +85,32 @@ async function generateQuestions(req) {
   const isFB = fill_blank === "true" ? 1 : 0;
   const isTC = translate_chn === "true" ? 1 : 0;
 
-  let numberOfQuestions = pages * 10; //each page will have 10 questions
   let numberOfQuestionTypes = isMP + isMM + isFB + isTC;
 
   // ChatGPT provided this handy formula for calculating minimum per type
-  // Minimum per type depends on the number of pages (questions) and number of question types selected
-  const minPerType = Math.max(5, Math.floor(numberOfQuestions / (numberOfQuestionTypes * 2)));
+  // Minimum per type depends on the number of questions and number of question types selected
+  const minPerType = Math.max(5, Math.floor(questions / (numberOfQuestionTypes * 2)));
 
-  //add minimum questions for each type to allow learners to have at least a few questions for each type specified by learner
+  //add minimum number of questions for each type to allow learners to experience all question types
   const questionTypeCounts = Array(numberOfQuestionTypes).fill(minPerType);
-  let remaining = numberOfQuestions - (minPerType * numberOfQuestionTypes);
+  let remaining = questions - (minPerType * numberOfQuestionTypes);
   let r = remaining;
 
-  //randomly distribute the remaining values until total number of questions is equal to numberOfQuestions
+  //randomly distribute the remaining values
   while (r > 0) {
     const index = Math.floor(Math.random() * numberOfQuestionTypes);
     questionTypeCounts[index]++;
     r--;
   }
-  console.log(questionTypeCounts);
 
   let count = 0; //count the different question types 
-  let questionsGenerated = 0; // keep track of questions generated to ensure that it does not go over the prescribed limit
-  const questions = [];
+  let questionsGenerated = 0; // keep track of questionsArr generated to ensure that it does not go over the prescribed limit
+  const questionsArr = [];
 
   if (Boolean(isMP)) { //identify word via pinyin 
     try {
       questionsGenerated += questionTypeCounts[count];
-      while (questions.length < questionsGenerated) {
+      while (questionsArr.length < questionsGenerated) {
         const tableSelect = Math.floor(Math.random() * 2);
 
         if (tableSelect === 1) {
@@ -138,7 +136,8 @@ async function generateQuestions(req) {
 
               const choiceQuery = await req.db.from("vocabulary")
                 .select("s_hanzi")
-                .where("introduced_in_lesson", lessonId)
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [v.s_hanzi.length])
+                .andWhere("introduced_in_lesson", lessonId)
                 .andWhere("pinyin", "!=", v.pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
                 .andWhere("s_hanzi", "!=", v.s_hanzi) //to avoid repeating the correct character or word
                 .orderByRaw('RAND()')
@@ -152,7 +151,7 @@ async function generateQuestions(req) {
 
               shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
 
-              questions.push(question + "<br /> &ensp;&ensp;&ensp;" + choiceString);
+              questionsArr.push(question + "<br /> &ensp;&ensp;&ensp;" + choiceString);
             }
             else if (question_format === "WR" || formatSelect == 1) {
               if (v.is_ambiguous !== 1) {
@@ -160,7 +159,7 @@ async function generateQuestions(req) {
                 const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
                 const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${v.pinyin}</strong>`);
 
-                questions.push(question + " _____________");
+                questionsArr.push(question + " _____________");
               }
             }
           });
@@ -187,7 +186,8 @@ async function generateQuestions(req) {
 
               const choiceQuery = await req.db.from("characters")
                 .select("s_hanzi")
-                .where("introduced_in_lesson", lessonId)
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [c.s_hanzi.length])
+                .andWhere("introduced_in_lesson", lessonId)
                 .andWhere("pinyin", "!=", c.pinyin) //to avoid using characters that share same pinyin (e.g. 她 & 他)
                 .andWhere("s_hanzi", "!=", c.s_hanzi) //to avoid repeating the correct character or word
                 .orderByRaw('RAND()')
@@ -201,7 +201,7 @@ async function generateQuestions(req) {
 
               shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
 
-              questions.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
+              questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
             }
             else if (question_format === "WR" || formatSelect == 1) {
               if (c.is_ambiguous !== 1) {
@@ -209,7 +209,7 @@ async function generateQuestions(req) {
                 const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
                 const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${c.pinyin}</strong>`);
 
-                questions.push(question + " _____________");
+                questionsArr.push(question + " _____________");
               }
             }
           });
@@ -223,7 +223,7 @@ async function generateQuestions(req) {
   if (Boolean(isMM)) {
     try {
       questionsGenerated += questionTypeCounts[count];
-      while (questions.length < questionsGenerated) {
+      while (questionsArr.length < questionsGenerated) {
         const vocab = await req.db.from("vocabulary")
           .select("meaning", "question_phrase", "s_hanzi")
           .whereNotNull("question_phrase")
@@ -255,6 +255,7 @@ async function generateQuestions(req) {
 
             const choiceQuery = await req.db.from("vocabulary")
               .select("s_hanzi")
+              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [v.s_hanzi.length])
               .whereNotNull("question_phrase")
               .andWhere("introduced_in_lesson", lessonId)
               .andWhere("question_phrase", "!=", v.question_phrase)
@@ -269,7 +270,7 @@ async function generateQuestions(req) {
 
             shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
 
-            questions.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
+            questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
           }
           else if (question_format === "WR" || formatSelect == 1) {
             //take a question template and include the selected pinyin
@@ -284,7 +285,7 @@ async function generateQuestions(req) {
               question = meaningPhrasesWR[phraseSelect].replace("{meaning}", `<strong>${v.question_phrase}</strong>`);
             }
 
-            questions.push(question + " _____________");
+            questionsArr.push(question + " _____________");
 
           }
         });
@@ -297,7 +298,7 @@ async function generateQuestions(req) {
   if (Boolean(isFB)) {
     try {
       questionsGenerated += questionTypeCounts[count];
-      while (questions.length < questionsGenerated) {
+      while (questionsArr.length < questionsGenerated) {
         const fitb = await req.db.from("fitb_questions")
           .select("s_question", "s_answer")
           .andWhere("lesson_id", lessonId)
@@ -315,12 +316,22 @@ async function generateQuestions(req) {
           if (question_format === "MC" || formatSelect == 0) {
             const choices = [];
 
-            const choiceQuery = await req.db.from("vocabulary")
+            let choiceQuery = await req.db.from("vocabulary")
               .select("s_hanzi")
+              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
               .andWhere("introduced_in_lesson", lessonId)
               .andWhere("s_hanzi", "!=", f.s_answer)
               .orderByRaw('RAND()')
               .limit(3);
+
+            if(choiceQuery.length < 3) {
+              choiceQuery = await req.db.from("vocabulary")
+              .select("s_hanzi")
+              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
+              .andWhere("s_hanzi", "!=", f.s_answer)
+              .orderByRaw('RAND()')
+              .limit(3);
+            }
 
             choiceQuery.map((cq) => choices.push(cq.s_hanzi));
             choices.push(f.s_answer); // finally push the correct answer 
@@ -330,11 +341,11 @@ async function generateQuestions(req) {
 
             shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
 
-            questions.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
+            questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
 
           }
           else if (question_format === "WR" || formatSelect == 1)
-            questions.push(question);
+            questionsArr.push(question);
         });
       }
     } catch (error) {
@@ -345,14 +356,14 @@ async function generateQuestions(req) {
   if (Boolean(isTC)) {
     try {
       questionsGenerated += questionTypeCounts[count];
-      while (questions.length < questionsGenerated) {
+      while (questionsArr.length < questionsGenerated) {
         const trcn = await req.db.from("translation_questions")
-          .select("eng_sentence")
+          .select("eng_s_sentence", "eng_t_sentence")
           .andWhere("lesson_id", lessonId)
           .orderByRaw('RAND()')
           .limit(1);
 
-        questions.push("Translate the sentence(s) to Chinese. Names of people will be provided in the parenthesis.<br />&ensp;&ensp;&ensp;<strong>" + trcn[0].eng_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
+        questionsArr.push("Translate the sentence(s) into Chinese. When specified, the names of people will be provided in the parentheses.<br />&ensp;&ensp;&ensp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
       }
     } catch (error) {
       console.error('Error fetching vocab:', error);
@@ -362,19 +373,17 @@ async function generateQuestions(req) {
 
   //finally, get lesson details 
   const lessonTitle = await req.db.from("lessons").select("title").where("id", lessonId);
-  //console.log(lessonTitle); 
-  //console.log([lessonTitle[0].title, questions]); 
 
-  return { title: lessonTitle[0].title, questions: questions };
+  return { title: lessonTitle[0].title, questionsArr: questionsArr };
 }
 
 router.get("/worksheets/:lessonId", async (req, res, next) => {
   try {
-    //generate questions
-    const { title, questions } = await generateQuestions(req);
+    //generate questions to put on worksheet
+    const { title, questionsArr } = await generatequestionsArr(req);
 
-    const questionHtml = questions.map((q, i) => {
-      if (i < Number(req.headers.pages) * 10) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
+    const questionHtml = questionsArr.map((q, i) => {
+      if (i < Number(req.headers.questions)) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
     }).join("");
 
     // Step 1: Construct full font path
@@ -396,7 +405,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '12mm', bottom: '15mm', left: '10mm', right: '10mm' }
+      margin: { top: '12mm', bottom: '15mm', left: '10mm', right: '10mm' },
     });
     await browser.close();
 
