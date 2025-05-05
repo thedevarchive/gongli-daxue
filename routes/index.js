@@ -134,6 +134,7 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
       .orderByRaw('RAND()')
       .limit(3);
 
+    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
     choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
     const shuffled = shuffleChoices(choices); //shuffle choices 
 
@@ -160,13 +161,39 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
 }
 
 async function formulateMMQuestion(req, isSimplified, isMC) {
+  const meaningPhrasesMC = [
+    "Which word means {meaning}?",
+    "Select the word that means {meaning}.",
+    "Choose the correct word that refers to \"{meaning}\".",
+    "Which of these mean \"{meaning}\"?",
+    "Identify the word that means \"{meaning}\" in English.",
+  ]
+
+  const meaningPhrasesWR = [
+    "What word means {meaning}?",
+    "Translate \"{meaning}\" to Chinese.",
+    "Write the Chinese character(s) for \"{meaning}\"."
+  ]
+
+  const particlePhrasesMC = [
+    "Select the Chinese term used as a(n) {meaning}.",
+    "Identify the Chinese term for {meaning}.",
+    "Which Chinese particle refers to the {meaning}?"
+  ]
+
+  const particlePhrasesWR = [
+    "Translate the grammatical term “{meaning}” into Chinese.",
+    "What is the Chinese equivalent of the {meaning}?",
+    "What term is used as a(n) {meaning}?"
+  ]
+
   const lessonId = Number(req.params.lessonId);
 
   let question = "";
 
   if (isMC) {
     const rightAns = await req.db.from("vocabulary")
-      .select("meaning", "s_hanzi")
+      .select("meaning", "s_hanzi", "question_phrase")
       .whereNotNull("question_phrase") //eliminates character names in vocabulary 
       .andWhere("introduced_in_lesson", lessonId)
       .orderByRaw('RAND()')
@@ -179,7 +206,7 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
     else {
       const phraseSelect = Math.floor(Math.random() * meaningPhrasesMC.length);
       question = meaningPhrasesMC[phraseSelect].replace("{meaning}", `<strong>${rightAns[0].question_phrase}</strong>`);
-    }
+    } 
 
     //select 3 more hanzi for the wrong choices 
     const choices = [];
@@ -204,7 +231,7 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
   }
 
   const rightAns = await req.db.from("vocabulary")
-    .select("meaning")
+    .select("meaning", "question_phrase")
     .whereNotNull("question_phrase") //eliminates character names in vocabulary 
     .andWhere("introduced_in_lesson", lessonId)
     .orderByRaw('RAND()')
@@ -221,6 +248,49 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
 
   //otherwise, just return the question followed by a blank
   return question + " _____________";
+}
+
+async function formulateFITBQuestion(req, isSimplified, isMC) {
+  const lessonId = Number(req.params.lessonId);
+
+  let rightAns = await req.db.from("fitb_questions")
+    .select("s_question", "s_answer")
+    .where("lesson_id", lessonId)
+    .orderByRaw("RAND()")
+    .limit(1);
+
+  if (isMC) {
+    const choices = [];
+
+    rightAns = await req.db.from("vocabulary")
+      .select("s_hanzi")
+      .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
+      .andWhere("introduced_in_lesson", lessonId)
+      .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
+      .orderByRaw('RAND()')
+      .limit(3);
+
+    if (choiceQuery.length < 3) {
+      rightAns = await req.db.from("vocabulary")
+        .select("s_hanzi")
+        .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
+        .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
+        .orderByRaw('RAND()')
+        .limit(3);
+    }
+
+    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
+    choices.push(rightAns[0].s_answer); // finally push the correct answer 
+    const shuffled = shuffleChoices(choices); //shuffle choices 
+
+    let choiceString = "";
+
+    shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
+
+    return rightAns[0].s_question + "<br />&ensp;&ensp;&ensp;" + choiceString;
+  }
+
+  return rightAns[0].s_question;
 }
 
 async function getGeneratedQuestions(req) {
@@ -267,17 +337,10 @@ async function getGeneratedQuestions(req) {
         //when learner selects both, randomly pick the format for each question
         if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
 
-        if (tableSelect === 1) {
-          if (question_format === "MC" || formatSelect == 0)
-            questionsArr.push(await formulateMPQuestionFromVocab(req, true, true));
-          else if (question_format === "WR" || formatSelect == 1)
-            questionsArr.push(await formulateMPQuestionFromVocab(req, true, false));
-        }
+        if (tableSelect === 1) 
+          questionsArr.push(await formulateMPQuestionFromVocab(req, true, question_format === "MC" || formatSelect === 1));
         else
-          if (question_format === "MC" || formatSelect == 0)
-            questionsArr.push(await formulateMPQuestionFromChars(req, true, true));
-          else if (question_format === "WR" || formatSelect == 1)
-            questionsArr.push(await formulateMPQuestionFromChars(req, true, false));
+          questionsArr.push(await formulateMPQuestionFromChars(req, true, question_format === "MC" || formatSelect === 1));
       }
     } catch (error) {
       console.error('Error fetching query:', error);
@@ -293,10 +356,7 @@ async function getGeneratedQuestions(req) {
         //when learner selects both, randomly pick the format for each question
         if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
 
-        if (question_format === "MC" || formatSelect == 0) 
-          questionsArr.push(await formulateMMQuestion(req, true, true)); 
-        else if (question_format === "WR" || formatSelect == 1) 
-          questionsArr.push(await formulateMMQuestion(req, true, false)); 
+        questionsArr.push(await formulateMMQuestion(req, true, question_format === "MC" || formatSelect === 1));
       }
     } catch (error) {
       console.error('Error fetching query:', error);
@@ -307,57 +367,14 @@ async function getGeneratedQuestions(req) {
     try {
       questionsGenerated += questionTypeCounts[count];
       while (questionsArr.length < questionsGenerated) {
-        const fitb = await req.db.from("fitb_questions")
-          .select("s_question", "s_answer")
-          .andWhere("lesson_id", lessonId)
-          .orderByRaw("RAND()")
-          .limit(1);
+        let formatSelect = -1;
 
-        fitb.map(async (f) => {
-          let question = f.s_question;
-
-          let formatSelect = -1;
-
-          //when learner selects both, randomly pick the format for each question
-          if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-          if (question_format === "MC" || formatSelect == 0) {
-            const choices = [];
-
-            let choiceQuery = await req.db.from("vocabulary")
-              .select("s_hanzi")
-              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
-              .andWhere("introduced_in_lesson", lessonId)
-              .andWhere("s_hanzi", "!=", f.s_answer)
-              .orderByRaw('RAND()')
-              .limit(3);
-
-            if (choiceQuery.length < 3) {
-              choiceQuery = await req.db.from("vocabulary")
-                .select("s_hanzi")
-                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
-                .andWhere("s_hanzi", "!=", f.s_answer)
-                .orderByRaw('RAND()')
-                .limit(3);
-            }
-
-            choiceQuery.map((cq) => choices.push(cq.s_hanzi));
-            choices.push(f.s_answer); // finally push the correct answer 
-            const shuffled = shuffleChoices(choices); //shuffle choices 
-
-            let choiceString = "";
-
-            shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
-
-            questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
-
-          }
-          else if (question_format === "WR" || formatSelect == 1)
-            questionsArr.push(question);
-        });
+        //when learner selects both, randomly pick the format for each question
+        if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
+        questionsArr.push(await formulateFITBQuestion(req, true, question_format === "MC" || formatSelect === 1));
       }
     } catch (error) {
-      console.error('Error fetching vocab:', error);
+      console.error('Error fetching fitb:', error);
     }
     count++;
   }
@@ -429,10 +446,10 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     // Send response
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': 'attachment; filename="worksheet.pdf"',
+      'Content-Disposition': 'inline; filename="worksheet.pdf"',
       'Content-Length': pdfBuffer.length,
     });
-    res.send(Buffer.from(pdfBuffer));
+    res.end(pdfBuffer);
 
   } catch (error) {
     console.error('Error generating PDF:', error);
