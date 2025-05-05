@@ -27,24 +27,6 @@ function shuffleChoices(array) {
   return array;
 }
 
-const pinyinPhrasesMC = [
-  "Which word is read as {pinyin}?",
-  "Select the word that matches the pronunciation {pinyin}.",
-  "Choose the correct word for {pinyin}.",
-  "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
-  "Determine which word aligns with this Pinyin reading: {pinyin}.",
-  "Encircle the letter next to the word with this Pinyin: {pinyin}.",
-  "Which of the following is read as {pinyin}?"
-]
-
-const pinyinPhrasesWR = [
-  "What word is pronounced {pinyin}?",
-  "What word has this Pinyin: {pinyin}?",
-  "How do you write {pinyin} in character(s)?",
-  "Which word does this Pinyin represent: {pinyin}?",
-  "Write the correct character(s) for the sound {pinyin}."
-]
-
 const meaningPhrasesMC = [
   "Which word means {meaning}?",
   "Select the word that means {meaning}.",
@@ -74,7 +56,149 @@ const particlePhrasesWR = [
   "What term is used as a(n) {meaning}?"
 ]
 
-async function generateQuestions(req) {
+async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
+  const lessonId = Number(req.params.lessonId);
+
+  //Templates for phrasing the match Pinyin questions
+  const phrasesMC = [
+    "Which word is read as {pinyin}?",
+    "Select the word that matches the pronunciation {pinyin}.",
+    "Choose the correct word for {pinyin}.",
+    "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
+    "Determine which word aligns with this Pinyin reading: {pinyin}.",
+    "Encircle the letter next to the word with this Pinyin: {pinyin}.",
+    "Which of the following is read as {pinyin}?"
+  ]
+
+  const phrasesWR = [
+    "What word is pronounced {pinyin}?",
+    "What word has this Pinyin: {pinyin}?",
+    "How do you write {pinyin} in character(s)?",
+    "Which word does this Pinyin represent: {pinyin}?",
+    "Write the correct character(s) for the sound {pinyin}."
+  ]
+
+  if (isMC) {
+    const rightAns = await req.db.from("vocabulary")
+      .select("pinyin", "s_hanzi")
+      .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+      .andWhere("introduced_in_lesson", lessonId)
+      .orderByRaw('RAND()')
+      .limit(1);
+
+    //take a question template and include the selected pinyin
+    const phraseSelect = Math.floor(Math.random() * phrasesMC.length);
+    const question = phrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+
+    //select 3 more hanzi for the wrong choices 
+    const choices = [];
+
+    let choiceQuery = await req.db.from("vocabulary")
+      .select("s_hanzi")
+      .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
+      .andWhere("introduced_in_lesson", lessonId)
+      .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+      .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+      .orderByRaw('RAND()')
+      .limit(3);
+
+    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
+    choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
+    const shuffled = shuffleChoices(choices); //shuffle choices 
+
+    let choiceString = "";
+
+    shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
+
+    return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
+  }
+
+  const rightAns = await req.db.from("vocabulary")
+    .select("pinyin", "s_hanzi")
+    .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+    .andWhere("introduced_in_lesson", lessonId)
+    .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+    .orderByRaw('RAND()')
+    .limit(1);
+
+  //take a question template and include the selected pinyin
+  const phraseSelect = Math.floor(Math.random() * phrasesWR.length);
+  const question = phrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+
+  //otherwise, just return the question with a blank afterwards
+  return question + " _____________";
+}
+
+async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
+  const lessonId = Number(req.params.lessonId);
+
+  //Templates for phrasing the match Pinyin questions
+  const phrasesMC = [
+    "Which word is read as {pinyin}?",
+    "Select the word that matches the pronunciation {pinyin}.",
+    "Choose the correct word for {pinyin}.",
+    "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
+    "Determine which word aligns with this Pinyin reading: {pinyin}.",
+    "Encircle the letter next to the word with this Pinyin: {pinyin}.",
+    "Which of the following is read as {pinyin}?"
+  ]
+
+  const phrasesWR = [
+    "What word is pronounced {pinyin}?",
+    "What word has this Pinyin: {pinyin}?",
+    "How do you write {pinyin} in character(s)?",
+    "Which word does this Pinyin represent: {pinyin}?",
+    "Write the correct character(s) for the sound {pinyin}."
+  ]
+
+  if (isMC) {
+    const rightAns = await req.db.from("characters")
+      .select("pinyin", "s_hanzi")
+      .andWhere("introduced_in_lesson", lessonId)
+      .orderByRaw('RAND()')
+      .limit(1);
+
+    //take a question template and include the selected pinyin
+    const phraseSelect = Math.floor(Math.random() * phrasesMC.length);
+    const question = phrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+
+    //select 3 more hanzi for the wrong choices 
+    const choices = [];
+
+    let choiceQuery = await req.db.from("characters")
+      .select("s_hanzi")
+      .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+      .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+      .orderByRaw('RAND()')
+      .limit(3);
+
+    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
+    choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
+    const shuffled = shuffleChoices(choices); //shuffle choices 
+
+    let choiceString = "";
+
+    shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
+
+    return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
+  }
+
+  const rightAns = await req.db.from("characters")
+    .select("pinyin", "s_hanzi")
+    .andWhere("introduced_in_lesson", lessonId)
+    .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+    .orderByRaw('RAND()')
+    .limit(1);
+
+  //take a question template and include the selected pinyin
+  const phraseSelect = Math.floor(Math.random() * phrasesWR.length);
+  const question = phrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+
+  //otherwise, just return the question with a blank afterwards
+  return question + " _____________";
+}
+
+async function getGeneratedQuestions(req) {
   //get selected lesson id and worksheet details from client side
   const lessonId = Number(req.params.lessonId);
   const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
@@ -113,107 +237,22 @@ async function generateQuestions(req) {
       while (questionsArr.length < questionsGenerated) {
         const tableSelect = Math.floor(Math.random() * 2);
 
+        let formatSelect = -1;
+
+        //when learner selects both, randomly pick the format for each question
+        if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
+
         if (tableSelect === 1) {
-          const vocab = await req.db.from("vocabulary")
-            .select("pinyin", "s_hanzi", "is_ambiguous")
-            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
-            .andWhere("introduced_in_lesson", lessonId)
-            .orderByRaw('RAND()')
-            .limit(1);
-
-          vocab.map(async (v) => {
-            let formatSelect = -1;
-
-            //when learner selects both, randomly pick the format for each question
-            if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-            if (question_format === "MC" || formatSelect == 0) {
-              //take a question template and include the selected pinyin
-              const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
-              const question = pinyinPhrasesMC[phraseSelect].replace("{pinyin}", `<strong>${v.pinyin}</strong>`);
-              //select 3 more hanzi for the wrong choices 
-              const choices = [];
-
-              const choiceQuery = await req.db.from("vocabulary")
-                .select("s_hanzi")
-                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [v.s_hanzi.length])
-                .andWhere("introduced_in_lesson", lessonId)
-                .andWhere("pinyin", "!=", v.pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
-                .andWhere("s_hanzi", "!=", v.s_hanzi) //to avoid repeating the correct character or word
-                .orderByRaw('RAND()')
-                .limit(3);
-
-              choiceQuery.map((cq) => choices.push(cq.s_hanzi));
-              choices.push(v.s_hanzi); // finally append the correct answer 
-              const shuffled = shuffleChoices(choices); //shuffle choices 
-
-              let choiceString = "";
-
-              shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
-
-              questionsArr.push(question + "<br /> &ensp;&ensp;&ensp;" + choiceString);
-            }
-            else if (question_format === "WR" || formatSelect == 1) {
-              if (v.is_ambiguous !== 1) {
-                //take a question template and include the selected pinyin
-                const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
-                const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${v.pinyin}</strong>`);
-
-                questionsArr.push(question + " _____________");
-              }
-            }
-          });
+          if (question_format === "MC" || formatSelect == 0)
+            questionsArr.push(await formulateMPQuestionFromVocab(req, true, true));
+          else if (question_format === "WR" || formatSelect == 1)
+            questionsArr.push(await formulateMPQuestionFromVocab(req, true, false));
         }
-        else {
-          const chars = await req.db.from("characters")
-            .select("pinyin", "s_hanzi", "is_ambiguous")
-            .where("introduced_in_lesson", lessonId)
-            .orderByRaw('RAND()')
-            .limit(1);
-
-          chars.map(async (c) => {
-            let formatSelect = -1;
-
-            //when learner selects both, randomly pick the format for each question
-            if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-            if (question_format === "MC" || formatSelect == 0) {
-              //take a question template and include the selected pinyin
-              const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
-              const question = pinyinPhrasesMC[phraseSelect].replace("{pinyin}", `<strong>${c.pinyin}</strong>`);
-              //select 3 more hanzi for the wrong choices 
-              const choices = [];
-
-              const choiceQuery = await req.db.from("characters")
-                .select("s_hanzi")
-                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [c.s_hanzi.length])
-                .andWhere("introduced_in_lesson", lessonId)
-                .andWhere("pinyin", "!=", c.pinyin) //to avoid using characters that share same pinyin (e.g. 她 & 他)
-                .andWhere("s_hanzi", "!=", c.s_hanzi) //to avoid repeating the correct character or word
-                .orderByRaw('RAND()')
-                .limit(3);
-
-              choiceQuery.map((cq) => choices.push(cq.s_hanzi));
-              choices.push(c.s_hanzi); // finally push the correct answer 
-              const shuffled = shuffleChoices(choices); //shuffle choices 
-
-              let choiceString = "";
-
-              shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
-
-              questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
-            }
-            else if (question_format === "WR" || formatSelect == 1) {
-              if (c.is_ambiguous !== 1) {
-                //take a question template and include the selected pinyin
-                const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
-                const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${c.pinyin}</strong>`);
-
-                questionsArr.push(question + " _____________");
-              }
-            }
-          });
-        }
+        else
+          if (question_format === "MC" || formatSelect == 0)
+            questionsArr.push(await formulateMPQuestionFromChars(req, true, true));
+          else if (question_format === "WR" || formatSelect == 1)
+            questionsArr.push(await formulateMPQuestionFromChars(req, true, false));
       }
     } catch (error) {
       console.error('Error fetching query:', error);
@@ -379,7 +418,7 @@ async function generateQuestions(req) {
 router.get("/worksheets/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
-    const { title, questionsArr } = await generateQuestions(req);
+    const { title, questionsArr } = await getGeneratedQuestions(req);
 
     const questionHtml = questionsArr.map((q, i) => {
       if (i < Number(req.headers.questions)) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;

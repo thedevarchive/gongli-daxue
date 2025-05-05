@@ -78,6 +78,9 @@
         }
 
         tbody {
+            position: relative;
+            min-height: 100vh; /* Make sure it fills a full page */
+            padding-bottom: 60px; /* Leave space for the answer key */
             font-size: 12px;
             text-align: center;
         }
@@ -85,6 +88,13 @@
         h6 {
             margin: 0;
             font-weight: 400;
+        }
+
+        .answer-link {
+            position: absolute;
+            page-break-before: always;
+            font-size: 14px;
+            display: none;
         }
     </style>
 </head>
@@ -133,8 +143,13 @@
             <span>Time Taken: __:____-__:____</span>
         </div>
     </div>
-    <p>General Directions: Please answer all questions to the best of your ability. Please write as legibly as you can.</p>
+    <p>General Directions: Please answer all questions to the best of your ability. Please write as legibly as you can.
+    </p>
     <!-- QUESTIONS GO HERE -->
+
+    <div class="answer-link">
+        Stuck? <a href="https://your-site.com/answer-key">https://your-site.com/answer-key</a>
+    </div>
 </body>
 
 </html>
