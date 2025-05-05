@@ -74,7 +74,7 @@ const particlePhrasesWR = [
   "What term is used as a(n) {meaning}?"
 ]
 
-async function generatequestionsArr(req) {
+async function generateQuestions(req) {
   //get selected lesson id and worksheet details from client side
   const lessonId = Number(req.params.lessonId);
   const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
@@ -286,7 +286,6 @@ async function generatequestionsArr(req) {
             }
 
             questionsArr.push(question + " _____________");
-
           }
         });
       }
@@ -324,13 +323,13 @@ async function generatequestionsArr(req) {
               .orderByRaw('RAND()')
               .limit(3);
 
-            if(choiceQuery.length < 3) {
+            if (choiceQuery.length < 3) {
               choiceQuery = await req.db.from("vocabulary")
-              .select("s_hanzi")
-              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
-              .andWhere("s_hanzi", "!=", f.s_answer)
-              .orderByRaw('RAND()')
-              .limit(3);
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [f.s_answer.length])
+                .andWhere("s_hanzi", "!=", f.s_answer)
+                .orderByRaw('RAND()')
+                .limit(3);
             }
 
             choiceQuery.map((cq) => choices.push(cq.s_hanzi));
@@ -363,7 +362,7 @@ async function generatequestionsArr(req) {
           .orderByRaw('RAND()')
           .limit(1);
 
-        questionsArr.push("Translate the sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
+        questionsArr.push("Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
       }
     } catch (error) {
       console.error('Error fetching vocab:', error);
@@ -380,7 +379,7 @@ async function generatequestionsArr(req) {
 router.get("/worksheets/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
-    const { title, questionsArr } = await generatequestionsArr(req);
+    const { title, questionsArr } = await generateQuestions(req);
 
     const questionHtml = questionsArr.map((q, i) => {
       if (i < Number(req.headers.questions)) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
@@ -406,6 +405,15 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
       format: 'A4',
       printBackground: true,
       margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' },
+      headerTemplate: `
+        <div></div>
+      `,
+      footerTemplate: `
+        <div style="font-size:14px; text-align:right; width:100%; margin-right:50px; margin-bottom: 10px;">
+          <span class="pageNumber">
+        </div>
+      `,
+      displayHeaderFooter: true,
     });
     await browser.close();
 
