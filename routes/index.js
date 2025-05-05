@@ -27,6 +27,25 @@ function shuffleChoices(array) {
   return array;
 }
 
+//Templates for phrasing the Match Pinyin questions
+const pinyinPhrasesMC = [
+  "Which word is read as {pinyin}?",
+  "Select the word that matches the pronunciation {pinyin}.",
+  "Choose the correct word for {pinyin}.",
+  "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
+  "Determine which word aligns with this Pinyin reading: {pinyin}.",
+  "Encircle the letter next to the word with this Pinyin: {pinyin}.",
+  "Which of the following is read as {pinyin}?"
+]
+
+const pinyinPhrasesWR = [
+  "What word is pronounced {pinyin}?",
+  "What word has this Pinyin: {pinyin}?",
+  "How do you write {pinyin} in character(s)?",
+  "Which word does this Pinyin represent: {pinyin}?",
+  "Write the correct character(s) for the sound {pinyin}."
+]
+
 const meaningPhrasesMC = [
   "Which word means {meaning}?",
   "Select the word that means {meaning}.",
@@ -59,25 +78,6 @@ const particlePhrasesWR = [
 async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
   const lessonId = Number(req.params.lessonId);
 
-  //Templates for phrasing the match Pinyin questions
-  const phrasesMC = [
-    "Which word is read as {pinyin}?",
-    "Select the word that matches the pronunciation {pinyin}.",
-    "Choose the correct word for {pinyin}.",
-    "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
-    "Determine which word aligns with this Pinyin reading: {pinyin}.",
-    "Encircle the letter next to the word with this Pinyin: {pinyin}.",
-    "Which of the following is read as {pinyin}?"
-  ]
-
-  const phrasesWR = [
-    "What word is pronounced {pinyin}?",
-    "What word has this Pinyin: {pinyin}?",
-    "How do you write {pinyin} in character(s)?",
-    "Which word does this Pinyin represent: {pinyin}?",
-    "Write the correct character(s) for the sound {pinyin}."
-  ]
-
   if (isMC) {
     const rightAns = await req.db.from("vocabulary")
       .select("pinyin", "s_hanzi")
@@ -87,8 +87,8 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
       .limit(1);
 
     //take a question template and include the selected pinyin
-    const phraseSelect = Math.floor(Math.random() * phrasesMC.length);
-    const question = phrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+    const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
+    const question = pinyinPhrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
 
     //select 3 more hanzi for the wrong choices 
     const choices = [];
@@ -102,6 +102,16 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
       .orderByRaw('RAND()')
       .limit(3);
 
+    if (choiceQuery.length < 3)
+      choiceQuery = await req.db.from("vocabulary")
+        .select("s_hanzi")
+        .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
+        .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+        .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+        .orderByRaw('RAND()')
+        .limit(3);
+
+    console.log(choiceQuery.length);
     choiceQuery.map((cq) => choices.push(cq.s_hanzi));
     choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
     const shuffled = shuffleChoices(choices); //shuffle choices 
@@ -122,34 +132,15 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
     .limit(1);
 
   //take a question template and include the selected pinyin
-  const phraseSelect = Math.floor(Math.random() * phrasesWR.length);
-  const question = phrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+  const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
+  const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
 
-  //otherwise, just return the question with a blank afterwards
+  //otherwise, just return the question followed by a blank
   return question + " _____________";
 }
 
 async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
   const lessonId = Number(req.params.lessonId);
-
-  //Templates for phrasing the match Pinyin questions
-  const phrasesMC = [
-    "Which word is read as {pinyin}?",
-    "Select the word that matches the pronunciation {pinyin}.",
-    "Choose the correct word for {pinyin}.",
-    "Identify the corresponding Chinese word for the following Pinyin: {pinyin}.",
-    "Determine which word aligns with this Pinyin reading: {pinyin}.",
-    "Encircle the letter next to the word with this Pinyin: {pinyin}.",
-    "Which of the following is read as {pinyin}?"
-  ]
-
-  const phrasesWR = [
-    "What word is pronounced {pinyin}?",
-    "What word has this Pinyin: {pinyin}?",
-    "How do you write {pinyin} in character(s)?",
-    "Which word does this Pinyin represent: {pinyin}?",
-    "Write the correct character(s) for the sound {pinyin}."
-  ]
 
   if (isMC) {
     const rightAns = await req.db.from("characters")
@@ -159,8 +150,8 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
       .limit(1);
 
     //take a question template and include the selected pinyin
-    const phraseSelect = Math.floor(Math.random() * phrasesMC.length);
-    const question = phrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+    const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
+    const question = pinyinPhrasesMC[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
 
     //select 3 more hanzi for the wrong choices 
     const choices = [];
@@ -191,10 +182,10 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
     .limit(1);
 
   //take a question template and include the selected pinyin
-  const phraseSelect = Math.floor(Math.random() * phrasesWR.length);
-  const question = phrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+  const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
+  const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
 
-  //otherwise, just return the question with a blank afterwards
+  //otherwise, just return the question followed by a blank
   return question + " _____________";
 }
 

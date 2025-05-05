@@ -8,6 +8,12 @@
     <style>
         body {
             font-family: 'Source Han Sans', sans-serif;
+            position: relative;
+            min-height: 100vh;
+            /* Leave space for the answer key */
+            padding: 12px 10px 12px 10px;
+            /* Matches the Puppeteer PDF margins */
+            box-sizing: border-box;
         }
 
         @font-face {
@@ -78,9 +84,6 @@
         }
 
         tbody {
-            position: relative;
-            min-height: 100vh; /* Make sure it fills a full page */
-            padding-bottom: 60px; /* Leave space for the answer key */
             font-size: 12px;
             text-align: center;
         }
@@ -94,7 +97,6 @@
             position: absolute;
             page-break-before: always;
             font-size: 14px;
-            display: none;
         }
     </style>
 </head>
@@ -147,9 +149,10 @@
     </p>
     <!-- QUESTIONS GO HERE -->
 
-    <div class="answer-link">
-        Stuck? <a href="https://your-site.com/answer-key">https://your-site.com/answer-key</a>
-    </div>
 </body>
+
+<div class="answer-link">
+    Need some help? <a href="https://your-site.com/answer-key">https://your-site.com/answer-key</a>
+</div>
 
 </html>
