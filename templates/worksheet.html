@@ -21,6 +21,7 @@
             line-height: 2.0;
             /* controls spacing *within* each question */
             font-size: 22px;
+            page-break-inside: avoid;
         }
 
         h1 {
@@ -68,7 +69,8 @@
 
         table {
             border: 2px solid black;
-            border-collapse: collapse; /* Makes borders collapse into a single line */
+            border-collapse: collapse;
+            /* Makes borders collapse into a single line */
         }
 
         td {
@@ -76,8 +78,12 @@
         }
 
         tbody {
-            font-size: 12px; 
+            font-size: 12px;
             text-align: center;
+        }
+
+        h6 {
+            margin: 0;
         }
     </style>
 </head>

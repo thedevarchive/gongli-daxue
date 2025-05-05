@@ -13,7 +13,7 @@ router.get('/', function (req, res, next) {
 
 //get title of lessons 
 router.get("/lessons", async (req, res, next) => {
-  const lessons = await req.db.from("lessons").orderBy("id");
+  const lessons = await req.db.from("lessons");
   res.json({ lessons });
 });
 
@@ -363,7 +363,7 @@ async function generatequestionsArr(req) {
           .orderByRaw('RAND()')
           .limit(1);
 
-        questionsArr.push("Translate the sentence(s) into Chinese. When specified, the names of people will be provided in the parentheses.<br />&ensp;&ensp;&ensp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
+        questionsArr.push("Translate the sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
       }
     } catch (error) {
       console.error('Error fetching vocab:', error);
@@ -405,7 +405,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '12mm', bottom: '15mm', left: '10mm', right: '10mm' },
+      margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' },
     });
     await browser.close();
 
