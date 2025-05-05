@@ -46,35 +46,6 @@ const pinyinPhrasesWR = [
   "Write the correct character(s) for the sound {pinyin}."
 ]
 
-const meaningPhrasesMC = [
-  "Which word means {meaning}?",
-  "Select the word that means {meaning}.",
-  "Choose the correct word that refers to \"{meaning}\".",
-  "Which of these mean \"{meaning}\"?",
-  "Identify the word that means \"{meaning}\" in English.",
-  "Encircle the letter next to the word that means {meaning}.",
-  "Which of the following means {meaning}?"
-]
-
-const meaningPhrasesWR = [
-  "What word means {meaning}?",
-  "Translate \"{meaning}\" to Chinese.",
-  "Write the Chinese term for \"{meaning}\"."
-]
-
-const particlePhrasesMC = [
-  "Select the Chinese term used as a(n) {meaning}.",
-  "Identify the Chinese term for {meaning}.",
-  "Which Chinese particle refers to the {meaning}?",
-  "Encircle the letter next to the particle for {meaning}."
-]
-
-const particlePhrasesWR = [
-  "Translate the grammatical term “{meaning}” into Chinese.",
-  "What is the Chinese equivalent of the {meaning}?",
-  "What term is used as a(n) {meaning}?"
-]
-
 async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
   const lessonId = Number(req.params.lessonId);
 
@@ -106,12 +77,12 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
       choiceQuery = await req.db.from("vocabulary")
         .select("s_hanzi")
         .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
+        .andWhere("introduced_in_lesson", "<=", lessonId) //if current lesson does not have enough choices, pick words with the same length from previous lessons
         .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
         .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
         .orderByRaw('RAND()')
         .limit(3);
 
-    console.log(choiceQuery.length);
     choiceQuery.map((cq) => choices.push(cq.s_hanzi));
     choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
     const shuffled = shuffleChoices(choices); //shuffle choices 
@@ -124,7 +95,7 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
   }
 
   const rightAns = await req.db.from("vocabulary")
-    .select("pinyin", "s_hanzi")
+    .select("pinyin")
     .whereNotNull("question_phrase") //eliminates character names in vocabulary 
     .andWhere("introduced_in_lesson", lessonId)
     .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
@@ -163,7 +134,6 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
       .orderByRaw('RAND()')
       .limit(3);
 
-    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
     choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
     const shuffled = shuffleChoices(choices); //shuffle choices 
 
@@ -175,7 +145,7 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
   }
 
   const rightAns = await req.db.from("characters")
-    .select("pinyin", "s_hanzi")
+    .select("pinyin")
     .andWhere("introduced_in_lesson", lessonId)
     .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
     .orderByRaw('RAND()')
@@ -184,6 +154,70 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
   //take a question template and include the selected pinyin
   const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
   const question = pinyinPhrasesWR[phraseSelect].replace("{pinyin}", `<strong>${rightAns[0].pinyin}</strong>`);
+
+  //otherwise, just return the question followed by a blank
+  return question + " _____________";
+}
+
+async function formulateMMQuestion(req, isSimplified, isMC) {
+  const lessonId = Number(req.params.lessonId);
+
+  let question = "";
+
+  if (isMC) {
+    const rightAns = await req.db.from("vocabulary")
+      .select("meaning", "s_hanzi")
+      .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+      .andWhere("introduced_in_lesson", lessonId)
+      .orderByRaw('RAND()')
+      .limit(1);
+
+    if (rightAns[0].meaning.startsWith("(")) {
+      const phraseSelect = Math.floor(Math.random() * particlePhrasesMC.length);
+      question = particlePhrasesMC[phraseSelect].replace("{meaning}", `<strong>${rightAns[0].question_phrase}</strong>`);
+    }
+    else {
+      const phraseSelect = Math.floor(Math.random() * meaningPhrasesMC.length);
+      question = meaningPhrasesMC[phraseSelect].replace("{meaning}", `<strong>${rightAns[0].question_phrase}</strong>`);
+    }
+
+    //select 3 more hanzi for the wrong choices 
+    const choices = [];
+
+    let choiceQuery = await req.db.from("vocabulary")
+      .select("s_hanzi")
+      .andWhere("introduced_in_lesson", lessonId)
+      .andWhere("pinyin", "!=", rightAns[0].meaning) //avoid using characters or words that share same pinyin (e.g. 她 & 他)
+      .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //avoid repeating the correct character or word
+      .orderByRaw('RAND()')
+      .limit(3);
+
+    choiceQuery.map((cq) => choices.push(cq.s_hanzi));
+    choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
+    const shuffled = shuffleChoices(choices); //shuffle choices 
+
+    let choiceString = "";
+
+    shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
+
+    return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
+  }
+
+  const rightAns = await req.db.from("vocabulary")
+    .select("meaning")
+    .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+    .andWhere("introduced_in_lesson", lessonId)
+    .orderByRaw('RAND()')
+    .limit(1);
+
+  if (rightAns[0].meaning.startsWith("(")) {
+    const phraseSelect = Math.floor(Math.random() * particlePhrasesWR.length);
+    question = particlePhrasesWR[phraseSelect].replace("{meaning}", `<strong>${rightAns[0].question_phrase}</strong>`);
+  }
+  else {
+    const phraseSelect = Math.floor(Math.random() * meaningPhrasesWR.length);
+    question = meaningPhrasesWR[phraseSelect].replace("{meaning}", `<strong>${rightAns[0].question_phrase}</strong>`);
+  }
 
   //otherwise, just return the question followed by a blank
   return question + " _____________";
@@ -250,81 +284,26 @@ async function getGeneratedQuestions(req) {
     }
     count++;
   }
-  if (Boolean(isMM)) {
+  if (Boolean(isMM)) { //identify word via meaning
     try {
       questionsGenerated += questionTypeCounts[count];
       while (questionsArr.length < questionsGenerated) {
-        const vocab = await req.db.from("vocabulary")
-          .select("meaning", "question_phrase", "s_hanzi")
-          .whereNotNull("question_phrase")
-          .andWhere("introduced_in_lesson", lessonId)
-          .orderByRaw('RAND()')
-          .limit(1);
+        let formatSelect = -1;
 
-        vocab.map(async (v) => {
+        //when learner selects both, randomly pick the format for each question
+        if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
 
-          let formatSelect = -1;
-
-          //when learner selects both, randomly pick the format for each question
-          if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-          if (question_format === "MC" || formatSelect == 0) {
-            //take a question template and include the selected pinyin
-            let question = "";
-
-            if (v.meaning.startsWith("(")) {
-              const phraseSelect = Math.floor(Math.random() * particlePhrasesMC.length);
-              question = particlePhrasesMC[phraseSelect].replace("{meaning}", `<strong>${v.question_phrase}</strong>`);
-            }
-            else {
-              const phraseSelect = Math.floor(Math.random() * meaningPhrasesMC.length);
-              question = meaningPhrasesMC[phraseSelect].replace("{meaning}", `<strong>${v.question_phrase}</strong>`);
-            }
-
-            const choices = [];
-
-            const choiceQuery = await req.db.from("vocabulary")
-              .select("s_hanzi")
-              .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [v.s_hanzi.length])
-              .whereNotNull("question_phrase")
-              .andWhere("introduced_in_lesson", lessonId)
-              .andWhere("question_phrase", "!=", v.question_phrase)
-              .orderByRaw('RAND()')
-              .limit(3);
-
-            choiceQuery.map((cq) => choices.push(cq.s_hanzi));
-            choices.push(v.s_hanzi); // finally push the correct answer 
-            const shuffled = shuffleChoices(choices); //shuffle choices 
-
-            let choiceString = "";
-
-            shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
-
-            questionsArr.push(question + "<br />&ensp;&ensp;&ensp;" + choiceString);
-          }
-          else if (question_format === "WR" || formatSelect == 1) {
-            //take a question template and include the selected pinyin
-            const phraseSelect = Math.floor(Math.random() * meaningPhrasesWR.length);
-            let question = "";
-            if (v.meaning.startsWith("(")) {
-              const phraseSelect = Math.floor(Math.random() * particlePhrasesWR.length);
-              question = particlePhrasesWR[phraseSelect].replace("{meaning}", `<strong>${v.question_phrase}</strong>`);
-            }
-            else {
-              const phraseSelect = Math.floor(Math.random() * meaningPhrasesWR.length);
-              question = meaningPhrasesWR[phraseSelect].replace("{meaning}", `<strong>${v.question_phrase}</strong>`);
-            }
-
-            questionsArr.push(question + " _____________");
-          }
-        });
+        if (question_format === "MC" || formatSelect == 0) 
+          questionsArr.push(await formulateMMQuestion(req, true, true)); 
+        else if (question_format === "WR" || formatSelect == 1) 
+          questionsArr.push(await formulateMMQuestion(req, true, false)); 
       }
     } catch (error) {
-      console.error('Error fetching vocab:', error);
+      console.error('Error fetching query:', error);
     }
     count++;
   }
-  if (Boolean(isFB)) {
+  if (Boolean(isFB)) { // fill the blank to complete the sentence 
     try {
       questionsGenerated += questionTypeCounts[count];
       while (questionsArr.length < questionsGenerated) {
