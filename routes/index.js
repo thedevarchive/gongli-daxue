@@ -253,7 +253,7 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
 async function formulateFITBQuestion(req, isSimplified, isMC) {
   const lessonId = Number(req.params.lessonId);
 
-  let rightAns = await req.db.from("fitb_questions")
+  const rightAns = await req.db.from("fitb_questions")
     .select("s_question", "s_answer")
     .where("lesson_id", lessonId)
     .orderByRaw("RAND()")
@@ -262,7 +262,7 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
   if (isMC) {
     const choices = [];
 
-    rightAns = await req.db.from("vocabulary")
+    let choiceQuery = await req.db.from("vocabulary")
       .select("s_hanzi")
       .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
       .andWhere("introduced_in_lesson", lessonId)
@@ -271,7 +271,7 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
       .limit(3);
 
     if (choiceQuery.length < 3) {
-      rightAns = await req.db.from("vocabulary")
+      choiceQuery = await req.db.from("vocabulary")
         .select("s_hanzi")
         .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
         .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
@@ -291,6 +291,17 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
   }
 
   return rightAns[0].s_question;
+}
+
+async function formulateTCQuestions(req, isSimplified) {
+  const lessonId = req.params.id; 
+
+  const question = await req.db.from("translation_questions")
+    .select("eng_s_sentence", "eng_t_sentence")
+    .orderByRaw("RAND()")
+    .limit(1); 
+
+  return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________"
 }
 
 async function getGeneratedQuestions(req) {
@@ -382,13 +393,7 @@ async function getGeneratedQuestions(req) {
     try {
       questionsGenerated += questionTypeCounts[count];
       while (questionsArr.length < questionsGenerated) {
-        const trcn = await req.db.from("translation_questions")
-          .select("eng_s_sentence", "eng_t_sentence")
-          .andWhere("lesson_id", lessonId)
-          .orderByRaw('RAND()')
-          .limit(1);
-
-        questionsArr.push("Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + trcn[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________");
+        questionsArr.push(await formulateTCQuestions(req, true)); 
       }
     } catch (error) {
       console.error('Error fetching vocab:', error);
@@ -407,8 +412,10 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     //generate questions to put on worksheet
     const { title, questionsArr } = await getGeneratedQuestions(req);
 
+    const numQuestions = Number(req.headers.questions); 
+
     const questionHtml = questionsArr.map((q, i) => {
-      if (i < Number(req.headers.questions)) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
+      if (i < numQuestions) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
     }).join("");
 
     // Step 1: Construct full font path
@@ -418,8 +425,25 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     // get worksheet template
     let html = fs.readFileSync(path.join(__dirname, '../templates', 'worksheet.html'), 'utf-8');
 
+    //calculate highest possible score for every grade except D (0 is lowest possible score in that letter grade)
+    //matches the Chinese grading system
+    //if lowest possible grade is a decimal value, round up values to encourage students to keep working towards the A grade (the Chinese way)
+    const aLow = Math.ceil(numQuestions * 0.85); 
+    const bLow = Math.ceil(numQuestions * 0.75); 
+    const cLow = Math.ceil(numQuestions * 0.65); 
+
     // Replace placeholders 
-    html = html.replace("{{LESSON_ID}}", req.params.lessonId).replace("{{LESSON_TITLE}}", title).replace('{{FONT_PATH}}', fontURL).replace("<!-- QUESTIONS GO HERE -->", questionHtml);
+    html = html.replace("{{LESSON_ID}}", req.params.lessonId)
+      .replace("{{LESSON_TITLE}}", title)
+      .replace('{{FONT_PATH}}', fontURL)
+      .replace('{{A_HIGH_GRADE}}', numQuestions)
+      .replace('{{A_LOW_GRADE}}', aLow)
+      .replace('{{B_HIGH_GRADE}}', (aLow - 1))
+      .replace('{{B_LOW_GRADE}}', bLow)
+      .replace('{{C_HIGH_GRADE}}', (bLow - 1))
+      .replace('{{C_LOW_GRADE}}', cLow)
+      .replace('{{D_HIGH_GRADE}}', (cLow - 1))
+      .replace("<!-- QUESTIONS GO HERE -->", questionHtml);
 
     // Launch Puppeteer
     const browser = await puppeteer.launch();
