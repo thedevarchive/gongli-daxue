@@ -279,6 +279,7 @@ async function formulateTCQuestions(req, isSimplified) {
 
     const question = await req.db.from("translation_questions")
         .select("eng_s_sentence", "eng_t_sentence")
+        .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
         .limit(1);
 
