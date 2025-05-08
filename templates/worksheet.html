@@ -41,8 +41,16 @@
             display: flex;
             flex-direction: row;
             gap: 190px;
-            justify-content: center;
+            justify-content: right;
             align-items: flex-start;
+        }
+
+        .logo {
+            top: 20px;
+            left: 20px;
+            width: auto;
+            height: auto;
+            z-index: 1000;
         }
 
         .flex-row {
@@ -60,11 +68,12 @@
             font-size: 18px;
         }
 
-        .details {
+        .student-fields {
             display: flex;
             flex-direction: column;
             margin-top: 10px;
             gap: 4px;
+            max-width: 250px;
             font-size: 18px;
         }
 
@@ -103,7 +112,7 @@
 
 <body>
     <div class="header">
-        <div class="flex-col">
+        <div class="logo flex-col">
             <div class="flex-row">
                 <h1>龚李</h1>
                 <div class="flex-col bold">
@@ -121,14 +130,14 @@
             <table>
                 <tbody>
                     <tr>
-                        <td>Grade</td>
+                        <td><strong>Grade</strong></td>
                         <td><strong>A</strong></td>
                         <td><strong>B</strong></td>
                         <td><strong>C</strong></td>
                         <td><strong>D</strong></td>
                     </tr>
                     <tr>
-                        <td>Scores</td>
+                        <td><strong>Scores</strong></td>
                         <td>{{A_LOW_GRADE}}-{{A_HIGH_GRADE}}</td>
                         <td>{{B_LOW_GRADE}}-{{B_HIGH_GRADE}}</td>
                         <td>{{C_LOW_GRADE}}-{{C_HIGH_GRADE}}</td>
@@ -138,17 +147,18 @@
             </table>
         </div>
 
-        <div class="details">
+        <div class="student-fields">
             <span>Lesson {{LESSON_ID}}: <strong>{{LESSON_TITLE}}</strong></span>
             <span>Name: ____________________</span>
             <span>Date: _____________________</span>
             <span>Time Taken: __:____-__:____</span>
         </div>
     </div>
-    <p>General Directions: Please answer all questions to the best of your ability. Please write as legibly as you can.
+    <p>
+        <strong>General Directions: </strong>
+        Please answer all questions to the best of your ability. Please write as legibly as you can.
     </p>
     <!-- QUESTIONS GO HERE -->
-
 </body>
 
 <div class="answer-link">

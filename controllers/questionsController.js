@@ -1,13 +1,3 @@
-//uses Fisher-Yates (Durstenfeld) shuffle
-//algorithm suggested by ChatGPT 
-function shuffleChoices(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]]; // swap elements
-    }
-    return array;
-}
-
 //Templates for phrasing the Match Pinyin questions
 const pinyinPhrasesMC = [
     "Which word is read as {pinyin}?",
@@ -26,6 +16,16 @@ const pinyinPhrasesWR = [
     "Which word does this Pinyin represent: {pinyin}?",
     "Write the correct character(s) for the sound {pinyin}."
 ]
+
+//uses Fisher-Yates (Durstenfeld) shuffle
+//algorithm suggested by ChatGPT 
+function shuffleChoices(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // swap elements
+    }
+    return array;
+}
 
 async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
     const lessonId = Number(req.params.lessonId);
@@ -275,7 +275,7 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
 }
 
 async function formulateTCQuestions(req, isSimplified) {
-    const lessonId = req.params.id;
+    const lessonId = Number(req.params.lessonId);
 
     const question = await req.db.from("translation_questions")
         .select("eng_s_sentence", "eng_t_sentence")
