@@ -22,33 +22,48 @@ router.get("/lessons", async (req, res, next) => {
 router.get("/lessons/:lessonId", async (req, res, next) => {
   const script = req.query.script || 'simplified'; // fallback to default if not provided
 
+  const lessonQuery = await req.db.from("lessons")
+    .select("title")
+    .where("id", req.params.lessonId);
+
+  const title = lessonQuery[0].title;
+  let chars, vocab, fitb_questions, tc_questions; 
+
   if (script === "simplified") {
-    const lessonQuery = await req.db.from("lessons")
-      .select("title")
-      .where("id", req.params.lessonId);
-
-    const title = lessonQuery[0].title;
-
-    const chars = await req.db.from("characters")
+    chars = await req.db.from("characters")
       .select("s_hanzi", "pinyin")
       .where("introduced_in_lesson", req.params.lessonId);
 
-    const vocab = await req.db.from("vocabulary")
+    vocab = await req.db.from("vocabulary")
       .select("s_hanzi", "pinyin", "meaning")
       .where("introduced_in_lesson", req.params.lessonId);
 
-    const fitb_questions = await req.db.from("fitb_questions")
+    fitb_questions = await req.db.from("fitb_questions")
       .select("s_question", "s_answer")
       .where("lesson_id", req.params.lessonId);
 
-    const tc_questions = await req.db.from("translation_questions")
+    tc_questions = await req.db.from("translation_questions")
       .select("eng_s_sentence", "chn_s_sentence")
       .where("lesson_id", req.params.lessonId);
-
-    return res.json({ title, chars, vocab, fitb_questions, tc_questions });
   }
+  else {
+    chars = await req.db.from("characters")
+      .select("t_hanzi", "pinyin")
+      .where("introduced_in_lesson", req.params.lessonId);
 
-  return res.json({ script });
+    vocab = await req.db.from("vocabulary")
+      .select("t_hanzi", "pinyin", "meaning")
+      .where("introduced_in_lesson", req.params.lessonId);
+
+    fitb_questions = await req.db.from("fitb_questions")
+      .select("t_question", "t_answer")
+      .where("lesson_id", req.params.lessonId);
+
+    tc_questions = await req.db.from("translation_questions")
+      .select("eng_t_sentence", "chn_t_sentence")
+      .where("lesson_id", req.params.lessonId);
+  }
+  return res.json({ title, chars, vocab, fitb_questions, tc_questions });
 });
 
 router.get("/worksheets/:lessonId", async (req, res, next) => {
