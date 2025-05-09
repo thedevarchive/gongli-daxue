@@ -19,12 +19,44 @@ router.get("/lessons", async (req, res, next) => {
   res.json({ lessons });
 });
 
+router.get("/lessons/:lessonId", async (req, res, next) => {
+  const script = req.query.script || 'simplified'; // fallback to default if not provided
+
+  if (script === "simplified") {
+    const lessonQuery = await req.db.from("lessons")
+      .select("title")
+      .where("id", req.params.lessonId);
+
+    const title = lessonQuery[0].title;
+
+    const chars = await req.db.from("characters")
+      .select("s_hanzi", "pinyin")
+      .where("introduced_in_lesson", req.params.lessonId);
+
+    const vocab = await req.db.from("vocabulary")
+      .select("s_hanzi", "pinyin", "meaning")
+      .where("introduced_in_lesson", req.params.lessonId);
+
+    const fitb_questions = await req.db.from("fitb_questions")
+      .select("s_question", "s_answer")
+      .where("lesson_id", req.params.lessonId);
+
+    const tc_questions = await req.db.from("translation_questions")
+      .select("eng_s_sentence", "chn_s_sentence")
+      .where("lesson_id", req.params.lessonId);
+
+    return res.json({ title, chars, vocab, fitb_questions, tc_questions });
+  }
+
+  return res.json({ script });
+});
+
 router.get("/worksheets/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
     const { title, questionsArr } = await getGeneratedQuestions(req);
 
-    const numQuestions = Number(req.headers.questions); 
+    const numQuestions = Number(req.headers.questions);
 
     const questionHtml = questionsArr.map((q, i) => {
       if (i < numQuestions) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
@@ -40,9 +72,9 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     //calculate highest possible score for every grade except D (0 is lowest possible score in that letter grade)
     //matches the Chinese grading system
     //if lowest possible grade is a decimal value, round up values to encourage students to keep working towards the A grade (the Chinese way)
-    const aLow = Math.ceil(numQuestions * 0.85); 
-    const bLow = Math.ceil(numQuestions * 0.75); 
-    const cLow = Math.ceil(numQuestions * 0.65); 
+    const aLow = Math.ceil(numQuestions * 0.85);
+    const bLow = Math.ceil(numQuestions * 0.75);
+    const cLow = Math.ceil(numQuestions * 0.65);
 
     // Replace placeholders 
     html = html.replace("{{LESSON_ID}}", req.params.lessonId)
