@@ -92,7 +92,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const cLow = Math.ceil(numQuestions * 0.65);
 
     // Replace placeholders 
-    html = html.replace("{{LESSON_ID}}", req.params.lessonId)
+    html = html.replaceAll("{{LESSON_ID}}", req.params.lessonId)
       .replace("{{LESSON_TITLE}}", title)
       .replace('{{FONT_PATH}}', fontURL)
       .replace('{{A_HIGH_GRADE}}', numQuestions)
