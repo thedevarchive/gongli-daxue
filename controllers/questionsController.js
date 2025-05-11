@@ -64,6 +64,18 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
                 .orderByRaw('RAND()')
                 .limit(3);
 
+        if (choiceQuery.length < 3)
+            //edge case for vocabulary with 4+ characters
+            //pick any vocabulary from same lesson as the wrong choices 
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) < ?', [rightAns[0].s_hanzi.length])
+                .andWhere("introduced_in_lesson", lessonId) 
+                .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+                .orderByRaw('RAND()')
+                .limit(3);
+
         choiceQuery.map((cq) => choices.push(cq.s_hanzi));
         choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
         const shuffled = shuffleChoices(choices); //shuffle choices 
