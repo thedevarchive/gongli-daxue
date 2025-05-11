@@ -40,7 +40,7 @@
         .header {
             display: flex;
             flex-direction: row;
-            gap: 190px;
+            gap: 20px;
             justify-content: right;
             align-items: flex-start;
         }
@@ -56,7 +56,7 @@
         .flex-row {
             display: flex;
             flex-direction: row;
-            gap: 16px;
+            gap: 15px;
             justify-content: center;
         }
 
@@ -106,6 +106,20 @@
             page-break-before: always;
             font-size: 14px;
         }
+
+        img {
+            height: 30px;
+            width: 30px;
+        }
+
+        .comment-box {
+            margin-top: 5px;
+            border: 1px solid black;
+            border-radius: 10px;
+            height: 100px;
+            width: 150px;
+            padding: 5px;
+        }
     </style>
 </head>
 
@@ -130,10 +144,10 @@
                 <tbody>
                     <tr>
                         <td><strong>Grade</strong></td>
-                        <td><strong>A</strong></td>
-                        <td><strong>B</strong></td>
-                        <td><strong>C</strong></td>
-                        <td><strong>D</strong></td>
+                        <td class="grade-cell"><img src="http://localhost:{{SERVER_PORT}}/images/big_happy.png" /></td>
+                        <td class="grade-cell"><img src="http://localhost:{{SERVER_PORT}}/images/happy.png" /></td>
+                        <td class="grade-cell"><img src="http://localhost:{{SERVER_PORT}}/images/neutral.png" /></td>
+                        <td class="grade-cell"><img src="http://localhost:{{SERVER_PORT}}/images/sad.png" /></td>
                     </tr>
                     <tr>
                         <td><strong>Scores</strong></td>
@@ -146,6 +160,10 @@
             </table>
         </div>
 
+        <div class="comment-box">
+            <strong>Comment: </strong>
+        </div>
+
         <div class="student-fields">
             <span>Lesson {{LESSON_ID}}: <strong>{{LESSON_TITLE}}</strong></span>
             <span>Name: ____________________</span>
@@ -155,13 +173,13 @@
     </div>
     <p>
         <strong>General Directions: </strong>
-        Please answer all questions to the best of your ability. Please write as legibly as you can.
+        Please answer all questions to the best of your ability. If you need to write the answers, please write as legibly as you can.
     </p>
     <!-- QUESTIONS GO HERE -->
 </body>
 
 <div class="answer-link">
-    <a href="http://localhost:3000/answer-key/{{LESSON_ID}}">Stuck?</a> Make sure you tried your best before looking there — you’ll learn more that way!
+    <a href="http://localhost:3000/answer-key/{{LESSON_ID}}">Stuck?</a> Make sure you tried your best before looking there — you’ll learn more that way ☺︎
 </div>
 
 </html>

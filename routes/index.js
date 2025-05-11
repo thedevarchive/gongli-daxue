@@ -81,8 +81,12 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const fontPath = path.resolve(__dirname, 'fonts', 'NotoSansSC-Regular.otf');
     const fontURL = `file://${fontPath}`;
 
+    console.log(req.headers.is_for_kids); 
+
     // get worksheet template
-    let html = fs.readFileSync(path.join(__dirname, '../templates', 'worksheet.html'), 'utf-8');
+    let html = (req.headers.is_for_kids === "true") ? 
+      fs.readFileSync(path.join(__dirname, '../templates', 'worksheet_kids.html'), 'utf-8') : 
+      fs.readFileSync(path.join(__dirname, '../templates', 'worksheet_default.html'), 'utf-8');
 
     //calculate highest possible score for every grade except D (0 is lowest possible score in that letter grade)
     //matches the Chinese grading system
@@ -95,6 +99,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     html = html.replaceAll("{{LESSON_ID}}", req.params.lessonId)
       .replace("{{LESSON_TITLE}}", title)
       .replace('{{FONT_PATH}}', fontURL)
+      .replaceAll("{{SERVER_PORT}}", process.env.PORT)
       .replace('{{A_HIGH_GRADE}}', numQuestions)
       .replace('{{A_LOW_GRADE}}', aLow)
       .replace('{{B_HIGH_GRADE}}', (aLow - 1))

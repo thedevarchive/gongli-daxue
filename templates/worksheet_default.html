@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Worksheet</title>
+    <meta name="author" content="GYZ-TDA">
+    <style>
+        body {
+            font-family: 'Source Han Sans', sans-serif;
+            position: relative;
+            min-height: 100vh;
+            /* Leave space for the answer key */
+            padding: 12px 0px 12px 0px;
+            box-sizing: border-box;
+        }
+
+        @font-face {
+            font-family: 'Source Han Sans';
+            src: url('file://{{FONT_PATH}}') format('opentype');
+        }
+
+        .question {
+            margin-bottom: 20px;
+            /* adjust as needed */
+            line-height: 2.0;
+            /* controls spacing *within* each question */
+            font-size: 22px;
+            page-break-inside: avoid;
+        }
+
+        h1 {
+            font-size: 32px;
+            border: 4px solid #dc2626;
+            border-radius: 10px;
+            color: #dc2626;
+            margin-top: 5px;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: row;
+            gap: 190px;
+            justify-content: right;
+            align-items: flex-start;
+        }
+
+        .logo {
+            top: 20px;
+            left: 20px;
+            width: auto;
+            height: auto;
+            z-index: 1000;
+        }
+
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+            margin-top: 5px;
+            gap: 4px;
+            font-size: 18px;
+        }
+
+        .student-fields {
+            display: flex;
+            flex-direction: column;
+            margin-top: 10px;
+            gap: 4px;
+            max-width: 250px;
+            font-size: 18px;
+        }
+
+        .bold {
+            font-weight: 800;
+        }
+
+        table {
+            border: 2px solid black;
+            border-collapse: collapse;
+            /* Makes borders collapse into a single line */
+        }
+
+        td {
+            border: 1px solid black;
+        }
+
+        tbody {
+            font-size: 12px;
+            text-align: center;
+        }
+
+        h6 {
+            margin: 0;
+            font-weight: 400;
+        }
+
+        .answer-link {
+            position: absolute;
+            page-break-before: always;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo flex-col">
+            <div class="flex-row">
+                <h1>龚李</h1>
+                <div class="flex-col bold">
+                    <div class="flex-row justify">
+                        <span>龚</span>
+                        <span>李</span>
+                        <span>练</span>
+                        <span>习</span>
+                        <span>册</span>
+                    </div>
+                    <div>Gong Li Worksheets</div>
+                </div>
+            </div>
+
+            <table>
+                <tbody>
+                    <tr>
+                        <td><strong>Grade</strong></td>
+                        <td><strong>A</strong></td>
+                        <td><strong>B</strong></td>
+                        <td><strong>C</strong></td>
+                        <td><strong>D</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scores</strong></td>
+                        <td>{{A_LOW_GRADE}}-{{A_HIGH_GRADE}}</td>
+                        <td>{{B_LOW_GRADE}}-{{B_HIGH_GRADE}}</td>
+                        <td>{{C_LOW_GRADE}}-{{C_HIGH_GRADE}}</td>
+                        <td>≤{{D_HIGH_GRADE}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="student-fields">
+            <span>Lesson {{LESSON_ID}}: <strong>{{LESSON_TITLE}}</strong></span>
+            <span>Name: ____________________</span>
+            <span>Date: _____________________</span>
+            <span>Time Taken: __:____-__:____</span>
+        </div>
+    </div>
+    <p>
+        <strong>General Directions: </strong>
+        Please answer all questions to the best of your ability. If you need to write the answers, please write as legibly as you can.
+    </p>
+    <!-- QUESTIONS GO HERE -->
+</body>
+
+<div class="answer-link">
+    <a href="http://localhost:3000/answer-key/{{LESSON_ID}}">Stuck?</a> Make sure you tried your best before looking there — you’ll learn more that way!
+</div>
+
+</html>
