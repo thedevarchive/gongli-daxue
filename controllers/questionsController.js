@@ -70,7 +70,7 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
             choiceQuery = await req.db.from("vocabulary")
                 .select("s_hanzi")
                 .whereRaw('CHAR_LENGTH(s_hanzi) < ?', [rightAns[0].s_hanzi.length])
-                .andWhere("introduced_in_lesson", lessonId) 
+                .andWhere("introduced_in_lesson", lessonId)
                 .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
                 .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
                 .orderByRaw('RAND()')
@@ -252,6 +252,8 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
         .orderByRaw("RAND()")
         .limit(1);
 
+    const lines = rightAns[0].s_question.trim().split('\n');
+
     if (isMC) {
         const choices = [];
 
@@ -280,6 +282,11 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
 
         shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc} &ensp;&ensp;&ensp;`));
 
+        //if fill in the blank question is in dialogue form, format the question to display lines of dialogue in separate lines
+        //and indent the lines after the first one 
+        if (lines.length > 1) {
+            return `<div style="display:flex; flex-direction: column; align-items: flex-start;"><div style="display:flex;"><strong>{{NUMBER}}.</strong><pre style="margin: 0 0 0 0.6em; font-family: inherit;">${rightAns[0].s_question}</pre></div><div style="padding-left: 2em; margin-top: 0.5em;">${choiceString}</div></div>`;
+        }
         return rightAns[0].s_question + "<br />&ensp;&ensp;&ensp;" + choiceString;
     }
 
@@ -296,6 +303,20 @@ async function formulateTCQuestions(req, isSimplified) {
         .limit(1);
 
     return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________"
+}
+
+async function formulateICSQuestions(req, isSimplified) {
+    const lessonId = Number(req.params.lessonId);
+
+    const question = await req.db.from("translation_questions")
+        .select("se_question", "sc_choice1", "sc_choice2", "sc_choice3", "sc_choice4")
+        .where("lesson_id", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1);
+
+    const choices = [question[0].sc_choice1, question[0].sc_choice2, question[0].sc_choice3, question[0].sc_choice4];
+
+    return ``;
 }
 
 async function getGeneratedQuestions(req) {

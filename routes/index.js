@@ -74,7 +74,10 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const numQuestions = Number(req.headers.questions);
 
     const questionHtml = questionsArr.map((q, i) => {
-      if (i < numQuestions) return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
+      if(i < numQuestions) {
+        if(q.includes("{{NUMBER}}")) return `<div class="question">${q.replace("{{NUMBER}}", i + 1)}</div>`; 
+        else return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
+      }
     }).join("");
 
     // Step 1: Construct full font path
