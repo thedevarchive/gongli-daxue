@@ -290,6 +290,9 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
         return rightAns[0].s_question + "<br />&ensp;&ensp;&ensp;" + choiceString;
     }
 
+    if (lines.length > 1) {
+        return `<div style="display:flex; align-items: flex-start;"><strong>{{NUMBER}}.</strong><pre style="margin: 0 0 0 0.6em; font-family: inherit;">${rightAns[0].s_question}</pre></div>`;
+    }
     return rightAns[0].s_question;
 }
 
@@ -308,29 +311,37 @@ async function formulateTCQuestions(req, isSimplified) {
 async function formulateICSQuestions(req, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
-    const question = await req.db.from("translation_questions")
+    const question = await req.db.from("identify_correct_sentence")
         .select("se_question", "sc_choice1", "sc_choice2", "sc_choice3", "sc_choice4")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
         .limit(1);
 
     const choices = [question[0].sc_choice1, question[0].sc_choice2, question[0].sc_choice3, question[0].sc_choice4];
+    const shuffled = shuffleChoices(choices); 
 
-    return ``;
+    let choiceString = "";
+
+    shuffled.map((sc, index) => (choiceString += "<br />&ensp;&ensp;&ensp;<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}`));
+
+    return question[0].se_question + choiceString;
 }
 
 async function getGeneratedQuestions(req) {
     //get selected lesson id and worksheet details from client side
     const lessonId = Number(req.params.lessonId);
-    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, question_format } = req.headers;
+    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, question_format } = req.headers;
 
     //get boolean values for each question type
     const isMP = match_pinyin === "true" ? 1 : 0;
     const isMM = match_meaning === "true" ? 1 : 0;
     const isFB = fill_blank === "true" ? 1 : 0;
     const isTC = translate_chn === "true" ? 1 : 0;
+    const isICS = ics === "true" ? 1 : 0; 
 
-    let numberOfQuestionTypes = isMP + isMM + isFB + isTC;
+    console.log(req.headers); 
+
+    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS;
 
     // ChatGPT provided this handy formula for calculating minimum per type
     // Minimum per type depends on the number of questions and number of question types selected
@@ -409,6 +420,17 @@ async function getGeneratedQuestions(req) {
             questionsGenerated += questionTypeCounts[count];
             while (questionsArr.length < questionsGenerated) {
                 questionsArr.push(await formulateTCQuestions(req, true));
+            }
+        } catch (error) {
+            console.error('Error fetching vocab:', error);
+        }
+        count++;
+    }
+    if (Boolean(isICS)) {
+        try {
+            questionsGenerated += questionTypeCounts[count];
+            while (questionsArr.length < questionsGenerated) {
+                questionsArr.push(await formulateICSQuestions(req, true));
             }
         } catch (error) {
             console.error('Error fetching vocab:', error);

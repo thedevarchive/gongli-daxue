@@ -84,8 +84,6 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const fontPath = path.resolve(__dirname, 'fonts', 'NotoSansSC-Regular.otf');
     const fontURL = `file://${fontPath}`;
 
-    console.log(req.headers.is_for_kids); 
-
     // get worksheet template
     let html = (req.headers.is_for_kids === "true") ? 
       fs.readFileSync(path.join(__dirname, '../templates', 'worksheet_kids.html'), 'utf-8') : 
