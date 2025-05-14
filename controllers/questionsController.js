@@ -311,7 +311,7 @@ async function formulateTCQuestions(req, isSimplified) {
 async function formulateICSQuestions(req, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
-    const question = await req.db.from("identify_correct_sentence")
+    const question = await req.db.from("ics_questions")
         .select("se_question", "sc_choice1", "sc_choice2", "sc_choice3", "sc_choice4")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
