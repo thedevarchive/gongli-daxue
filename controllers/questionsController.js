@@ -339,8 +339,6 @@ async function getGeneratedQuestions(req) {
     const isTC = translate_chn === "true" ? 1 : 0;
     const isICS = ics === "true" ? 1 : 0; 
 
-    console.log(req.headers); 
-
     let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS;
 
     // ChatGPT provided this handy formula for calculating minimum per type
