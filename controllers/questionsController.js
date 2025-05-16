@@ -327,10 +327,29 @@ async function formulateICSQuestions(req, isSimplified) {
     return question[0].se_question + choiceString;
 }
 
+async function formulateRSQuestions(req, isSimplified) {
+    const lessonId = Number(req.params.lessonId);
+
+    const question = await req.db.from("rs_questions")
+        .select("s_fragments")
+        .where("lesson_id", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1); 
+
+    const fragments = question[0].s_fragments.split(","); 
+    const shuffled = shuffleChoices(fragments); 
+
+    let choiceString = "";
+
+    shuffled.map((sf, index) => (choiceString += sf + "&ensp;&ensp;&ensp;"))
+
+    return "Rearrange the sentence fragments into a correct and complete sentence in Chinese. Write your answer in the blank provided. Where necessary, include punctuation. <br />&ensp;&ensp;&nbsp;" + choiceString + "<br />&ensp;&ensp;&ensp;______________________________________________"; 
+}
+
 async function getGeneratedQuestions(req) {
     //get selected lesson id and worksheet details from client side
     const lessonId = Number(req.params.lessonId);
-    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, question_format } = req.headers;
+    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, question_format } = req.headers;
 
     //get boolean values for each question type
     const isMP = match_pinyin === "true" ? 1 : 0;
@@ -338,12 +357,13 @@ async function getGeneratedQuestions(req) {
     const isFB = fill_blank === "true" ? 1 : 0;
     const isTC = translate_chn === "true" ? 1 : 0;
     const isICS = ics === "true" ? 1 : 0; 
+    const isRS = recon_sentence === "true" ? 1: 0; 
 
-    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS;
+    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS + isRS;
 
     // ChatGPT provided this handy formula for calculating minimum per type
     // Minimum per type depends on the number of questions and number of question types selected
-    const minPerType = Math.max(5, Math.floor(questions / (numberOfQuestionTypes * 2)));
+    const minPerType = Math.max(3, Math.floor(questions / (numberOfQuestionTypes * 2)));
 
     //add minimum number of questions for each type to allow learners to experience all question types
     const questionTypeCounts = Array(numberOfQuestionTypes).fill(minPerType);
@@ -429,6 +449,17 @@ async function getGeneratedQuestions(req) {
             questionsGenerated += questionTypeCounts[count];
             while (questionsArr.length < questionsGenerated) {
                 questionsArr.push(await formulateICSQuestions(req, true));
+            }
+        } catch (error) {
+            console.error('Error fetching vocab:', error);
+        }
+        count++;
+    }
+    if (Boolean(isRS)) {
+        try {
+            questionsGenerated += questionTypeCounts[count];
+            while (questionsArr.length < questionsGenerated) {
+                questionsArr.push(await formulateRSQuestions(req, true));
             }
         } catch (error) {
             console.error('Error fetching vocab:', error);
