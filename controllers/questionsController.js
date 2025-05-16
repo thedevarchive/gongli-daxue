@@ -312,12 +312,12 @@ async function formulateICSQuestions(req, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
     const question = await req.db.from("ics_questions")
-        .select("se_question", "sc_choice1", "sc_choice2", "sc_choice3", "sc_choice4")
+        .select("se_question", "sc_choices")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
         .limit(1);
 
-    const choices = [question[0].sc_choice1, question[0].sc_choice2, question[0].sc_choice3, question[0].sc_choice4];
+    const choices = question[0].sc_choices.split(",");
     const shuffled = shuffleChoices(choices); 
 
     let choiceString = "";
