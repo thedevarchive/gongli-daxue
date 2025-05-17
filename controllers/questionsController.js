@@ -305,7 +305,9 @@ async function formulateTCQuestions(req, isSimplified) {
         .orderByRaw("RAND()")
         .limit(1);
 
-    return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong><br />&ensp;&ensp;&ensp;______________________________________________"
+    const blank = "<br />&ensp;&ensp;&ensp;______________________________________________";
+
+    return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong>" + blank + blank; 
 }
 
 async function formulateICSQuestions(req, isSimplified) {
