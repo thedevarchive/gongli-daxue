@@ -66,12 +66,12 @@ router.get("/lessons/:lessonId", async (req, res, next) => {
   return res.json({ title, chars, vocab, fitb_questions, tc_questions });
 });
 
-router.get("/worksheets/:lessonId", async (req, res, next) => {
+router.post("/worksheets/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
     const { title, questionsArr } = await getGeneratedQuestions(req);
 
-    const numQuestions = Number(req.headers.questions);
+    const numQuestions = Number(req.body.questions);
 
     const questionHtml = questionsArr.map((q, i) => {
       if(i < numQuestions) {
@@ -85,7 +85,7 @@ router.get("/worksheets/:lessonId", async (req, res, next) => {
     const fontURL = `file://${fontPath}`;
 
     // get worksheet template
-    let html = (req.headers.is_for_kids === "true") ? 
+    let html = (req.body.is_for_kids === "true") ? 
       fs.readFileSync(path.join(__dirname, '../templates', 'worksheet_kids.html'), 'utf-8') : 
       fs.readFileSync(path.join(__dirname, '../templates', 'worksheet_default.html'), 'utf-8');
 

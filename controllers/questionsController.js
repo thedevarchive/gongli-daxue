@@ -351,7 +351,7 @@ async function formulateRSQuestions(req, isSimplified) {
 async function getGeneratedQuestions(req) {
     //get selected lesson id and worksheet details from client side
     const lessonId = Number(req.params.lessonId);
-    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, question_format } = req.headers;
+    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, question_format } = req.body;
 
     //get boolean values for each question type
     const isMP = match_pinyin === "true" ? 1 : 0;
