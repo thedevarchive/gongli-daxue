@@ -27,16 +27,29 @@ function shuffleChoices(array) {
     return array;
 }
 
-async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
+async function formulateMPQuestionFromVocab(req, endId = 0, isSimplified, isMC) {
     const lessonId = Number(req.params.lessonId);
 
+    let rightAns;
+
     if (isMC) {
-        const rightAns = await req.db.from("vocabulary")
-            .select("pinyin", "s_hanzi")
-            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
-            .andWhere("introduced_in_lesson", lessonId)
-            .orderByRaw('RAND()')
-            .limit(1);
+        if (endId === 0) {
+            rightAns = await req.db.from("vocabulary")
+                .select("pinyin", "s_hanzi")
+                .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+                .andWhere("introduced_in_lesson", lessonId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
+        else {
+            rightAns = await req.db.from("vocabulary")
+                .select("pinyin", "s_hanzi")
+                .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
 
         //take a question template and include the selected pinyin
         const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
@@ -45,14 +58,29 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
         //select 3 more hanzi for the wrong choices 
         const choices = [];
 
-        let choiceQuery = await req.db.from("vocabulary")
-            .select("s_hanzi")
-            .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
-            .andWhere("introduced_in_lesson", lessonId)
-            .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
-            .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
-            .orderByRaw('RAND()')
-            .limit(3);
+        let choiceQuery;
+
+        if (endId === 0) {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
+                .andWhere("introduced_in_lesson", lessonId)
+                .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
+        else {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_hanzi.length])
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
 
         if (choiceQuery.length < 3)
             choiceQuery = await req.db.from("vocabulary")
@@ -87,13 +115,25 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
         return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
     }
 
-    const rightAns = await req.db.from("vocabulary")
-        .select("pinyin")
-        .whereNotNull("question_phrase") //eliminates character names in vocabulary 
-        .andWhere("introduced_in_lesson", lessonId)
-        .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
-        .orderByRaw('RAND()')
-        .limit(1);
+    if (endId === 0) {
+        rightAns = await req.db.from("vocabulary")
+            .select("pinyin")
+            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+            .andWhere("introduced_in_lesson", lessonId)
+            .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
+    else {
+        rightAns = await req.db.from("vocabulary")
+            .select("pinyin")
+            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+            .andWhere("introduced_in_lesson", ">=", lessonId)
+            .andWhere("introduced_in_lesson", "<=", endId)
+            .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
 
     //take a question template and include the selected pinyin
     const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
@@ -103,15 +143,27 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC) {
     return question + " _____________";
 }
 
-async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
+async function formulateMPQuestionFromChars(req, endId = 0, isSimplified, isMC) {
     const lessonId = Number(req.params.lessonId);
 
+    let rightAns;
+
     if (isMC) {
-        const rightAns = await req.db.from("characters")
-            .select("pinyin", "s_hanzi")
-            .andWhere("introduced_in_lesson", lessonId)
-            .orderByRaw('RAND()')
-            .limit(1);
+        if (endId === 0) {
+            rightAns = await req.db.from("characters")
+                .select("pinyin", "s_hanzi")
+                .andWhere("introduced_in_lesson", lessonId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
+        else {
+            rightAns = await req.db.from("characters")
+                .select("pinyin", "s_hanzi")
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
 
         //take a question template and include the selected pinyin
         const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
@@ -120,12 +172,27 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
         //select 3 more hanzi for the wrong choices 
         const choices = [];
 
-        let choiceQuery = await req.db.from("characters")
-            .select("s_hanzi")
-            .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
-            .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
-            .orderByRaw('RAND()')
-            .limit(3);
+        let choiceQuery;
+
+        if (endId === 0) {
+            choiceQuery = await req.db.from("characters")
+                .select("s_hanzi")
+                .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+                .andWhere("introduced_in_lesson", lessonId)
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
+        else {
+            choiceQuery = await req.db.from("characters")
+                .select("s_hanzi")
+                .andWhere("pinyin", "!=", rightAns[0].pinyin) //to avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //to avoid repeating the correct character or word
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
 
         choiceQuery.map((cq) => choices.push(cq.s_hanzi));
         choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
@@ -138,12 +205,23 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
         return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
     }
 
-    const rightAns = await req.db.from("characters")
-        .select("pinyin")
-        .andWhere("introduced_in_lesson", lessonId)
-        .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
-        .orderByRaw('RAND()')
-        .limit(1);
+    if (endId === 0) {
+        rightAns = await req.db.from("characters")
+            .select("pinyin")
+            .andWhere("introduced_in_lesson", lessonId)
+            .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
+    else {
+        rightAns = await req.db.from("characters")
+            .select("pinyin")
+            .andWhere("introduced_in_lesson", ">=", lessonId)
+            .andWhere("introduced_in_lesson", "<=", endId)
+            .andWhere("is_ambiguous", 0) //only pick words that do not share the same pinyin 
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
 
     //take a question template and include the selected pinyin
     const phraseSelect = Math.floor(Math.random() * pinyinPhrasesWR.length);
@@ -153,7 +231,7 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC) {
     return question + " _____________";
 }
 
-async function formulateMMQuestion(req, isSimplified, isMC) {
+async function formulateMMQuestion(req, endId = 0, isSimplified, isMC) {
     const meaningPhrasesMC = [
         "Which word means {meaning}?",
         "Select the word that means {meaning}.",
@@ -184,13 +262,26 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
 
     let question = "";
 
+    let rightAns;
+
     if (isMC) {
-        const rightAns = await req.db.from("vocabulary")
-            .select("meaning", "s_hanzi", "question_phrase")
-            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
-            .andWhere("introduced_in_lesson", lessonId)
-            .orderByRaw('RAND()')
-            .limit(1);
+        if (endId === 0) {
+            rightAns = await req.db.from("vocabulary")
+                .select("meaning", "s_hanzi", "question_phrase")
+                .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+                .andWhere("introduced_in_lesson", lessonId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
+        else {
+            rightAns = await req.db.from("vocabulary")
+                .select("meaning", "s_hanzi", "question_phrase")
+                .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .orderByRaw('RAND()')
+                .limit(1);
+        }
 
         if (rightAns[0].meaning.startsWith("(")) {
             const phraseSelect = Math.floor(Math.random() * particlePhrasesMC.length);
@@ -204,13 +295,27 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
         //select 3 more hanzi for the wrong choices 
         const choices = [];
 
-        let choiceQuery = await req.db.from("vocabulary")
-            .select("s_hanzi")
-            .andWhere("introduced_in_lesson", lessonId)
-            .andWhere("pinyin", "!=", rightAns[0].meaning) //avoid using characters or words that share same pinyin (e.g. 她 & 他)
-            .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //avoid repeating the correct character or word
-            .orderByRaw('RAND()')
-            .limit(3);
+        let choiceQuery;
+
+        if (endId === 0) {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .andWhere("introduced_in_lesson", lessonId)
+                .andWhere("pinyin", "!=", rightAns[0].meaning) //avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //avoid repeating the correct character or word
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
+        else {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .andWhere("pinyin", "!=", rightAns[0].meaning) //avoid using characters or words that share same pinyin (e.g. 她 & 他)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_hanzi) //avoid repeating the correct character or word
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
 
         choiceQuery.map((cq) => choices.push(cq.s_hanzi));
         choices.push(rightAns[0].s_hanzi); // finally append the correct answer 
@@ -223,12 +328,23 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
         return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
     }
 
-    const rightAns = await req.db.from("vocabulary")
-        .select("meaning", "question_phrase")
-        .whereNotNull("question_phrase") //eliminates character names in vocabulary 
-        .andWhere("introduced_in_lesson", lessonId)
-        .orderByRaw('RAND()')
-        .limit(1);
+    if (endId === 0) {
+        rightAns = await req.db.from("vocabulary")
+            .select("meaning", "question_phrase")
+            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+            .andWhere("introduced_in_lesson", lessonId)
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
+    else {
+        rightAns = await req.db.from("vocabulary")
+            .select("meaning", "question_phrase")
+            .whereNotNull("question_phrase") //eliminates character names in vocabulary 
+            .andWhere("introduced_in_lesson", ">=", lessonId)
+            .andWhere("introduced_in_lesson", "<=", endId)
+            .orderByRaw('RAND()')
+            .limit(1);
+    }
 
     if (rightAns[0].meaning.startsWith("(")) {
         const phraseSelect = Math.floor(Math.random() * particlePhrasesWR.length);
@@ -243,27 +359,53 @@ async function formulateMMQuestion(req, isSimplified, isMC) {
     return question + " _____________";
 }
 
-async function formulateFITBQuestion(req, isSimplified, isMC) {
+async function formulateFITBQuestion(req, endId = 0, isSimplified, isMC) {
     const lessonId = Number(req.params.lessonId);
 
-    const rightAns = await req.db.from("fitb_questions")
-        .select("s_question", "s_answer")
-        .where("lesson_id", lessonId)
-        .orderByRaw("RAND()")
-        .limit(1);
+    let rightAns;
+
+    if (endId === 0) {
+        rightAns = await req.db.from("fitb_questions")
+            .select("s_question", "s_answer")
+            .where("lesson_id", lessonId)
+            .orderByRaw("RAND()")
+            .limit(1);
+    }
+    else {
+        rightAns = await req.db.from("fitb_questions")
+            .select("s_question", "s_answer")
+            .where("lesson_id", ">=", lessonId)
+            .where("lesson_id", "<=", endId)
+            .orderByRaw("RAND()")
+            .limit(1);
+    }
 
     const lines = rightAns[0].s_question.trim().split('\n');
 
     if (isMC) {
         const choices = [];
 
-        let choiceQuery = await req.db.from("vocabulary")
-            .select("s_hanzi")
-            .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
-            .andWhere("introduced_in_lesson", lessonId)
-            .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
-            .orderByRaw('RAND()')
-            .limit(3);
+        let choiceQuery;
+
+        if (endId === 0) {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
+                .andWhere("introduced_in_lesson", lessonId)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
+        else {
+            choiceQuery = await req.db.from("vocabulary")
+                .select("s_hanzi")
+                .whereRaw('CHAR_LENGTH(s_hanzi) = ?', [rightAns[0].s_answer.length])
+                .andWhere("introduced_in_lesson", ">=", lessonId)
+                .andWhere("introduced_in_lesson", "<=", endId)
+                .andWhere("s_hanzi", "!=", rightAns[0].s_answer)
+                .orderByRaw('RAND()')
+                .limit(3);
+        }
 
         if (choiceQuery.length < 3) {
             choiceQuery = await req.db.from("vocabulary")
@@ -296,31 +438,55 @@ async function formulateFITBQuestion(req, isSimplified, isMC) {
     return rightAns[0].s_question;
 }
 
-async function formulateTCQuestions(req, isSimplified) {
+async function formulateTCQuestion(req, endId = 0, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
-    const question = await req.db.from("translation_questions")
+    let question;
+
+    if(endId === 0) {
+        question = await req.db.from("translation_questions")
         .select("eng_s_sentence", "eng_t_sentence")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
         .limit(1);
+    }
+    else {
+        question = await req.db.from("translation_questions")
+        .select("eng_s_sentence", "eng_t_sentence")
+        .where("lesson_id", ">=", lessonId)
+        .where("lesson_id", "<=", endId)
+        .orderByRaw("RAND()")
+        .limit(1);
+    }
 
     const blank = "<br />&ensp;&ensp;&ensp;______________________________________________";
 
-    return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong>" + blank + blank; 
+    return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong>" + blank + blank;
 }
 
-async function formulateICSQuestions(req, isSimplified) {
+async function formulateICSQuestion(req, endId = 0, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
-    const question = await req.db.from("ics_questions")
+    let question; 
+
+    if(endId === 0) {
+        question = await req.db.from("ics_questions")
         .select("se_question", "sc_choices")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
         .limit(1);
+    }
+    else {
+        question = await req.db.from("ics_questions")
+        .select("se_question", "sc_choices")
+        .where("lesson_id", ">=", lessonId)
+        .where("lesson_id", "<=", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1);
+    }
 
     const choices = question[0].sc_choices.split(",");
-    const shuffled = shuffleChoices(choices); 
+    const shuffled = shuffleChoices(choices);
 
     let choiceString = "";
 
@@ -329,152 +495,43 @@ async function formulateICSQuestions(req, isSimplified) {
     return question[0].se_question + choiceString;
 }
 
-async function formulateRSQuestions(req, isSimplified) {
+async function formulateRSQuestion(req, endId = 0, isSimplified) {
     const lessonId = Number(req.params.lessonId);
 
-    const question = await req.db.from("rs_questions")
-        .select("s_fragments")
+    let question;
+
+    if(endId === 0) {
+        question = await req.db.from("rs_questions")
+        .select("s_fragments", "t_fragments")
         .where("lesson_id", lessonId)
         .orderByRaw("RAND()")
-        .limit(1); 
+        .limit(1);
+    }
+    else {
+        question = await req.db.from("rs_questions")
+        .select("s_fragments", "t_fragments")
+        .where("lesson_id", ">=", lessonId)
+        .where("lesson_id", "<=", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1);
+    }
 
-    const fragments = question[0].s_fragments.split(","); 
-    const shuffled = shuffleChoices(fragments); 
+    const fragments = question[0].s_fragments.split(",");
+    const shuffled = shuffleChoices(fragments);
 
     let choiceString = "";
 
     shuffled.map((sf, index) => (choiceString += sf + "&ensp;&ensp;&ensp;"))
 
-    return "Rearrange the sentence fragments into a correct and complete sentence in Chinese. Write your answer in the blank provided. Where necessary, include punctuation. <br />&ensp;&ensp;&nbsp;" + choiceString + "<br />&ensp;&ensp;&ensp;______________________________________________"; 
-}
-
-async function getGeneratedQuestions(req) {
-    //get selected lesson id and worksheet details from client side
-    const lessonId = Number(req.params.lessonId);
-    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, question_format } = req.body;
-
-    //get boolean values for each question type
-    const isMP = match_pinyin === "true" ? 1 : 0;
-    const isMM = match_meaning === "true" ? 1 : 0;
-    const isFB = fill_blank === "true" ? 1 : 0;
-    const isTC = translate_chn === "true" ? 1 : 0;
-    const isICS = ics === "true" ? 1 : 0; 
-    const isRS = recon_sentence === "true" ? 1: 0; 
-
-    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS + isRS;
-
-    // ChatGPT provided this handy formula for calculating minimum per type
-    // Minimum per type depends on the number of questions and number of question types selected
-    const minPerType = Math.max(3, Math.floor(questions / (numberOfQuestionTypes * 2)));
-
-    //add minimum number of questions for each type to allow learners to experience all question types
-    const questionTypeCounts = Array(numberOfQuestionTypes).fill(minPerType);
-    let remaining = questions - (minPerType * numberOfQuestionTypes);
-    let r = remaining;
-
-    //randomly distribute the remaining values
-    while (r > 0) {
-        const index = Math.floor(Math.random() * numberOfQuestionTypes);
-        questionTypeCounts[index]++;
-        r--;
-    }
-
-    let count = 0; //count the different question types 
-    let questionsGenerated = 0; // keep track of questionsArr generated to ensure that it does not go over the prescribed limit
-    const questionsArr = [];
-
-    if (Boolean(isMP)) { //identify word via pinyin 
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                const tableSelect = Math.floor(Math.random() * 2);
-
-                let formatSelect = -1;
-
-                //when learner selects both, randomly pick the format for each question
-                if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-                if (tableSelect === 1)
-                    questionsArr.push(await formulateMPQuestionFromVocab(req, true, question_format === "MC" || formatSelect === 1));
-                else
-                    questionsArr.push(await formulateMPQuestionFromChars(req, true, question_format === "MC" || formatSelect === 1));
-            }
-        } catch (error) {
-            console.error('Error fetching query:', error);
-        }
-        count++;
-    }
-    if (Boolean(isMM)) { //identify word via meaning
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                let formatSelect = -1;
-
-                //when learner selects both, randomly pick the format for each question
-                if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-                questionsArr.push(await formulateMMQuestion(req, true, question_format === "MC" || formatSelect === 1));
-            }
-        } catch (error) {
-            console.error('Error fetching query:', error);
-        }
-        count++;
-    }
-    if (Boolean(isFB)) { // fill the blank to complete the sentence 
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                let formatSelect = -1;
-
-                //when learner selects both, randomly pick the format for each question
-                if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-                questionsArr.push(await formulateFITBQuestion(req, true, question_format === "MC" || formatSelect === 1));
-            }
-        } catch (error) {
-            console.error('Error fetching fitb:', error);
-        }
-        count++;
-    }
-    if (Boolean(isTC)) {
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                questionsArr.push(await formulateTCQuestions(req, true));
-            }
-        } catch (error) {
-            console.error('Error fetching vocab:', error);
-        }
-        count++;
-    }
-    if (Boolean(isICS)) {
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                questionsArr.push(await formulateICSQuestions(req, true));
-            }
-        } catch (error) {
-            console.error('Error fetching vocab:', error);
-        }
-        count++;
-    }
-    if (Boolean(isRS)) {
-        try {
-            questionsGenerated += questionTypeCounts[count];
-            while (questionsArr.length < questionsGenerated) {
-                questionsArr.push(await formulateRSQuestions(req, true));
-            }
-        } catch (error) {
-            console.error('Error fetching vocab:', error);
-        }
-        count++;
-    }
-
-    //finally, get lesson details 
-    const lessonTitle = await req.db.from("lessons").select("title").where("id", lessonId);
-
-    return { title: lessonTitle[0].title, questionsArr: questionsArr };
+    return "Rearrange the sentence fragments into a correct and complete sentence in Chinese. Write your answer in the blank provided. Where necessary, include punctuation. <br />&ensp;&ensp;&nbsp;" + choiceString + "<br />&ensp;&ensp;&ensp;______________________________________________";
 }
 
 module.exports = {
-    getGeneratedQuestions
+    formulateMPQuestionFromChars,
+    formulateMPQuestionFromVocab,
+    formulateMMQuestion,
+    formulateFITBQuestion,
+    formulateTCQuestion,
+    formulateICSQuestion,
+    formulateRSQuestion
 }
