@@ -7,7 +7,7 @@ const path = require('path');
 var router = express.Router();
 
 const { getGeneratedQuestions, getGeneratedAPQuestions } = require('../controllers/testGeneratorController');
-const { getAnswerKeyPhrases } = require("../controllers/miscController"); 
+const { getAnswerKeyPhrases } = require("../controllers/miscController");
 const { get } = require('https');
 
 /* GET home page. */
@@ -19,6 +19,62 @@ router.get('/', function (req, res, next) {
 router.get("/lessons", async (req, res, next) => {
   const lessons = await req.db.from("lessons");
   res.json({ lessons });
+});
+
+router.get("/guides/:lessonId", async (req, res, next) => {
+  const script = req.query.script || 'simplified'; // fallback to default if not provided
+
+  const lessonQuery = await req.db.from("lessons")
+    .select("title")
+    .where("id", req.params.lessonId);
+
+  const objectives = await req.db.from("objectives")
+    .select("description")
+    .where("lesson_id", req.params.lessonId);
+
+  const title = lessonQuery[0].title;
+  let vocab, vocabNotes, sampleStc;
+
+  if (script === "simplified") {
+    vocab = await req.db.from("vocabulary")
+      .select("s_hanzi", "pinyin", "meaning")
+      .where("introduced_in_lesson", req.params.lessonId);
+
+    vocabNotes = await req.db.from("vocabulary")
+      .select("s_hanzi", "pinyin", "meaning", "eng_s_notes")
+      .whereNot(function () {
+        this.where('eng_s_notes', "like", "Sentence character's%");
+      })
+      .andWhere(function () {
+        this.whereNot('eng_s_notes', "like", 'Name in%');
+      })
+      .andWhere("introduced_in_lesson", req.params.lessonId);
+
+    sampleStc = await req.db.from("sample_sentences")
+      .select("s_sentence", "eng_s_notes")
+      .where("lesson_id", req.params.lessonId);
+  }
+  else {
+    vocab = await req.db.from("vocabulary")
+      .select("t_hanzi", "pinyin", "meaning", "eng_t_notes")
+      .where("introduced_in_lesson", req.params.lessonId);
+
+    vocabNotes = await req.db.from("vocabulary")
+      .select("t_hanzi", "pinyin", "meaning", "eng_t_notes")
+      .whereNot(function () {
+        this.where('eng_t_notes', "like", "Sentence character's%");
+      })
+      .andWhere(function () {
+        this.whereNot('eng_t_notes', "like", 'Name in%');
+      })
+      .andWhere("introduced_in_lesson", req.params.lessonId);
+
+    sampleStc = await req.db.from("sample_sentences")
+      .select("t_sentence", "eng_t_notes")
+      .where("lesson_id", req.params.lessonId);
+  }
+
+  return res.json({ title, objectives, vocab, vocabNotes, sampleStc });
 });
 
 router.get("/lessons/:lessonId", async (req, res, next) => {
@@ -114,16 +170,16 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
 
     const luckyAnswerKey = Math.floor(Math.random() * 3);
 
-    if(luckyAnswerKey === 2) {
-      const {emoji, shortPhrase, longPhrase} = getAnswerKeyPhrases(); 
+    if (luckyAnswerKey === 2) {
+      const { emoji, shortPhrase, longPhrase } = getAnswerKeyPhrases();
 
       const answerKeyHtml = "<div class='answer-link'>{{EMOJI}}<a href='http://localhost:3000/answer-key/{{LESSON_ID}}'>{{SHORT_PHRASE}}</a> {{LONG_PHRASE}}</div>";
 
       html = html.replace("<!-- ANSWER KEY MAY SHOW UP HERE -->", answerKeyHtml)
-      .replace("{{LESSON_ID}}", req.params.lessonId)
-      .replace("{{EMOJI}}", emoji)
-      .replace("{{SHORT_PHRASE}}", shortPhrase)
-      .replace("{{LONG_PHRASE}}", longPhrase); 
+        .replace("{{LESSON_ID}}", req.params.lessonId)
+        .replace("{{EMOJI}}", emoji)
+        .replace("{{SHORT_PHRASE}}", shortPhrase)
+        .replace("{{LONG_PHRASE}}", longPhrase);
     }
 
     // Launch Puppeteer
