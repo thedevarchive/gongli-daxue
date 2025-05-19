@@ -173,7 +173,7 @@ async function getGeneratedAPQuestions(req) {
         }
     }
 
-    return { questionsArr: questionsArr };
+    return questionsArr;
 }
 
 module.exports = {
