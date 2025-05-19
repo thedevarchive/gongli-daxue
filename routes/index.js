@@ -43,7 +43,7 @@ router.get("/guides/:lessonId", async (req, res, next) => {
     vocabNotes = await req.db.from("vocabulary")
       .select("s_hanzi", "pinyin", "meaning", "eng_s_notes")
       .whereNot(function () {
-        this.where('eng_s_notes', "like", "Sentence character's%");
+        this.where('eng_s_notes', "like", "Sentence character%");
       })
       .andWhere(function () {
         this.whereNot('eng_s_notes', "like", 'Name in%');
@@ -62,7 +62,7 @@ router.get("/guides/:lessonId", async (req, res, next) => {
     vocabNotes = await req.db.from("vocabulary")
       .select("t_hanzi", "pinyin", "meaning", "eng_t_notes")
       .whereNot(function () {
-        this.where('eng_t_notes', "like", "Sentence character's%");
+        this.where('eng_t_notes', "like", "Sentence character%");
       })
       .andWhere(function () {
         this.whereNot('eng_t_notes', "like", 'Name in%');
