@@ -27,7 +27,7 @@ function shuffleChoices(array) {
     return array;
 }
 
-async function formulateMPQuestionFromVocab(req, endId = 0, isSimplified, isMC) {
+async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let rightAns;
@@ -112,6 +112,8 @@ async function formulateMPQuestionFromVocab(req, endId = 0, isSimplified, isMC) 
 
         shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
 
+
+        console.log("question", question); 
         return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
     }
 
@@ -143,7 +145,7 @@ async function formulateMPQuestionFromVocab(req, endId = 0, isSimplified, isMC) 
     return question + " _____________";
 }
 
-async function formulateMPQuestionFromChars(req, endId = 0, isSimplified, isMC) {
+async function formulateMPQuestionFromChars(req, isSimplified, isMC, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let rightAns;
@@ -164,6 +166,8 @@ async function formulateMPQuestionFromChars(req, endId = 0, isSimplified, isMC) 
                 .orderByRaw('RAND()')
                 .limit(1);
         }
+
+        console.log(rightAns); 
 
         //take a question template and include the selected pinyin
         const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);
@@ -231,7 +235,7 @@ async function formulateMPQuestionFromChars(req, endId = 0, isSimplified, isMC) 
     return question + " _____________";
 }
 
-async function formulateMMQuestion(req, endId = 0, isSimplified, isMC) {
+async function formulateMMQuestion(req, isSimplified, isMC, endId = 0) {
     const meaningPhrasesMC = [
         "Which word means {meaning}?",
         "Select the word that means {meaning}.",
@@ -359,7 +363,7 @@ async function formulateMMQuestion(req, endId = 0, isSimplified, isMC) {
     return question + " _____________";
 }
 
-async function formulateFITBQuestion(req, endId = 0, isSimplified, isMC) {
+async function formulateFITBQuestion(req, isSimplified, isMC, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let rightAns;
@@ -438,7 +442,7 @@ async function formulateFITBQuestion(req, endId = 0, isSimplified, isMC) {
     return rightAns[0].s_question;
 }
 
-async function formulateTCQuestion(req, endId = 0, isSimplified) {
+async function formulateTCQuestion(req, isSimplified, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let question;
@@ -464,7 +468,7 @@ async function formulateTCQuestion(req, endId = 0, isSimplified) {
     return "Translate the bolded sentence(s) into Chinese.<h6>&ensp;&ensp;&ensp;&nbsp;When specified, the names of people will be provided in parentheses.</h6>&ensp;&ensp;&nbsp;<strong>" + question[0].eng_s_sentence + "</strong>" + blank + blank;
 }
 
-async function formulateICSQuestion(req, endId = 0, isSimplified) {
+async function formulateICSQuestion(req, isSimplified, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let question; 
@@ -495,7 +499,7 @@ async function formulateICSQuestion(req, endId = 0, isSimplified) {
     return question[0].se_question + choiceString;
 }
 
-async function formulateRSQuestion(req, endId = 0, isSimplified) {
+async function formulateRSQuestion(req, isSimplified, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
     let question;

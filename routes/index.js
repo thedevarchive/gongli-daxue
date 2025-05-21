@@ -252,6 +252,7 @@ router.post("/academic-performance/:lessonId", async (req, res, next) => {
     html = html.replace("{{FIRST_LESSON_ID}}", req.params.lessonId)
       .replace('{{LAST_LESSON_ID}}', req.body.end_lesson)
       .replace('{{FONT_PATH}}', fontURL)
+      .replaceAll("{{SERVER_PORT}}", process.env.PORT)
       .replace('{{A_HIGH_GRADE}}', numQuestions)
       .replace('{{A_LOW_GRADE}}', aLow)
       .replace('{{B_HIGH_GRADE}}', (aLow - 1))

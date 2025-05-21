@@ -54,6 +54,8 @@ async function getGeneratedQuestions(req) {
                 //when learner selects both, randomly pick the format for each question
                 if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
 
+                //console.log(question_format === "MC" || formatSelect === 1); 
+
                 if (tableSelect === 1)
                     questionsArr.push(await formulateMPQuestionFromVocab(req, true, question_format === "MC" || formatSelect === 1));
                 else
