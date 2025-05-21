@@ -112,8 +112,6 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) 
 
         shuffled.map((sc, index) => (choiceString += "<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sc}&ensp;&ensp;&ensp;`));
 
-
-        console.log("question", question); 
         return question + "<br /> &ensp;&ensp;&ensp;" + choiceString;
     }
 
@@ -166,8 +164,6 @@ async function formulateMPQuestionFromChars(req, isSimplified, isMC, endId = 0) 
                 .orderByRaw('RAND()')
                 .limit(1);
         }
-
-        console.log(rightAns); 
 
         //take a question template and include the selected pinyin
         const phraseSelect = Math.floor(Math.random() * pinyinPhrasesMC.length);

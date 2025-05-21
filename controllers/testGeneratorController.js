@@ -152,23 +152,23 @@ async function getGeneratedAPQuestions(req) {
 
         if(questionType === 0) { //match pinyin
             const tableSelect = Math.floor(Math.random() * 2);
-            if(tableSelect === 0) questionsArr.push(await formulateMPQuestionFromChars(req, end_lesson, true, formatSelect === 0));
-            else questionsArr.push(await formulateMPQuestionFromVocab(req, end_lesson, true, formatSelect === 0));
+            if(tableSelect === 0) questionsArr.push(await formulateMPQuestionFromChars(req, true, formatSelect === 0, end_lesson));
+            else questionsArr.push(await formulateMPQuestionFromVocab(req, true, formatSelect === 0, end_lesson));
         }
         else if(questionType === 1) { //Match meaning
-            questionsArr.push(await formulateMMQuestion(req, end_lesson, true, formatSelect === 0));
+            questionsArr.push(await formulateMMQuestion(req, true, formatSelect === 0, end_lesson));
         }
         else if(questionType === 2) { //fill in the blank
-            questionsArr.push(await formulateFITBQuestion(req, end_lesson, true, formatSelect === 0));
+            questionsArr.push(await formulateFITBQuestion(req, true, formatSelect === 0, end_lesson));
         }
         else if(questionType === 3) { //translate chinese
-            questionsArr.push(await formulateTCQuestion(req, end_lesson, true, formatSelect === 0));
+            questionsArr.push(await formulateTCQuestion(req, true, end_lesson));
         }
         else if(questionType === 4 && lessonId >= 4) { //identify correct sentence
-            questionsArr.push(await formulateICSQuestion(req, end_lesson, true));
+            questionsArr.push(await formulateICSQuestion(req, true, end_lesson));
         }
         else if(questionType === 5 && lessonId >= 5) { //reconstruct sentences
-            questionsArr.push(await formulateRSQuestion(req, end_lesson, true));
+            questionsArr.push(await formulateRSQuestion(req, true, end_lesson));
         }
         else if(questionType === 6 && lessonId >= 8) { //soon
             //questionsArr.push(await formulateMMQuestion(req, end_lesson, true));
