@@ -132,9 +132,9 @@ async function getGeneratedQuestions(req) {
     }
 
     //finally, get lesson details 
-    const lessonTitle = await req.db.from("lessons").select("title").where("id", lessonId);
+    const lessonTitle = await req.db.from("lessons").select("eng_title").where("id", lessonId);
 
-    return { title: lessonTitle[0].title, questionsArr: questionsArr };
+    return { title: lessonTitle[0].eng_title, questionsArr: questionsArr };
 }
 
 async function getGeneratedAPQuestions(req) {

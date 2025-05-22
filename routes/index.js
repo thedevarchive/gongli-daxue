@@ -25,14 +25,14 @@ router.get("/guides/:lessonId", async (req, res, next) => {
   const script = req.query.script || 'simplified'; // fallback to default if not provided
 
   const lessonQuery = await req.db.from("lessons")
-    .select("title")
+    .select("eng_title", "s_chn_title")
     .where("id", req.params.lessonId);
 
   const objectives = await req.db.from("objectives")
     .select("description")
     .where("lesson_id", req.params.lessonId);
 
-  const title = lessonQuery[0].title;
+  const titles = lessonQuery[0]; 
   let vocab, vocabNotes, sampleStc;
 
   if (script === "simplified") {
@@ -74,54 +74,54 @@ router.get("/guides/:lessonId", async (req, res, next) => {
       .where("lesson_id", req.params.lessonId);
   }
 
-  return res.json({ title, objectives, vocab, vocabNotes, sampleStc });
+  return res.json({ titles, objectives, vocab, vocabNotes, sampleStc });
 });
 
-router.get("/lessons/:lessonId", async (req, res, next) => {
+router.get("/key/:code", async (req, res, next) => {
   const script = req.query.script || 'simplified'; // fallback to default if not provided
 
   const lessonQuery = await req.db.from("lessons")
-    .select("title")
-    .where("id", req.params.lessonId);
+    .select("id", "eng_title", "s_chn_title")
+    .where("hash", req.params.code);
 
-  const title = lessonQuery[0].title;
+  const lesson = lessonQuery[0];
   let chars, vocab, fitb_questions, tc_questions;
 
   if (script === "simplified") {
     chars = await req.db.from("characters")
       .select("s_hanzi", "pinyin")
-      .where("introduced_in_lesson", req.params.lessonId);
+      .where("introduced_in_lesson", lesson.id);
 
     vocab = await req.db.from("vocabulary")
       .select("s_hanzi", "pinyin", "meaning")
-      .where("introduced_in_lesson", req.params.lessonId);
+      .where("introduced_in_lesson", lesson.id);
 
     fitb_questions = await req.db.from("fitb_questions")
       .select("s_question", "s_answer")
-      .where("lesson_id", req.params.lessonId);
+      .where("lesson_id", lesson.id);
 
     tc_questions = await req.db.from("translation_questions")
       .select("eng_s_sentence", "chn_s_sentence")
-      .where("lesson_id", req.params.lessonId);
+      .where("lesson_id", lesson.id);
   }
   else {
     chars = await req.db.from("characters")
       .select("t_hanzi", "pinyin")
-      .where("introduced_in_lesson", req.params.lessonId);
+      .where("introduced_in_lesson", lesson.id);
 
     vocab = await req.db.from("vocabulary")
       .select("t_hanzi", "pinyin", "meaning")
-      .where("introduced_in_lesson", req.params.lessonId);
+      .where("introduced_in_lesson", lesson.id);
 
     fitb_questions = await req.db.from("fitb_questions")
       .select("t_question", "t_answer")
-      .where("lesson_id", req.params.lessonId);
+      .where("lesson_id", lesson.id);
 
     tc_questions = await req.db.from("translation_questions")
       .select("eng_t_sentence", "chn_t_sentence")
-      .where("lesson_id", req.params.lessonId);
+      .where("lesson_id", lesson.id);
   }
-  return res.json({ title, chars, vocab, fitb_questions, tc_questions });
+  return res.json({ lesson, chars, vocab, fitb_questions, tc_questions });
 });
 
 router.post("/worksheets/:lessonId", async (req, res, next) => {
@@ -170,13 +170,15 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
 
     const luckyAnswerKey = Math.floor(Math.random() * 3);
 
-    if (luckyAnswerKey === 2) {
+    if (luckyAnswerKey >= 0) {
       const { emoji, shortPhrase, longPhrase } = getAnswerKeyPhrases();
 
-      const answerKeyHtml = "<div class='answer-link'>{{EMOJI}}<a href='http://localhost:3000/answer-key/{{LESSON_ID}}'>{{SHORT_PHRASE}}</a> {{LONG_PHRASE}}</div>";
+      const answerKeyHtml = "<div class='answer-link'>{{EMOJI}}<a href='http://localhost:3000/answer-key/{{CODE}}'>{{SHORT_PHRASE}}</a> {{LONG_PHRASE}}</div>";
+
+      const codeQuery = await req.db.from("lessons").select("hash").where("id", req.params.lessonId); 
 
       html = html.replace("<!-- ANSWER KEY MAY SHOW UP HERE -->", answerKeyHtml)
-        .replace("{{LESSON_ID}}", req.params.lessonId)
+        .replace("{{CODE}}", codeQuery[0].hash)
         .replace("{{EMOJI}}", emoji)
         .replace("{{SHORT_PHRASE}}", shortPhrase)
         .replace("{{LONG_PHRASE}}", longPhrase);
