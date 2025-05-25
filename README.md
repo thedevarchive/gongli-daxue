@@ -21,7 +21,7 @@ This is the server needed to be downloaded to run gl-chn-worksheets.
 
 # How to Run (WIP)
 
-First, install all dependencies by typing ```npm install```. 
+First, install all dependencies by typing ```npm install```.  
 
 # How to Report Issues
 Email me at amaengo@protonmail.com if you find any bugs in the program or have any issues running it.
