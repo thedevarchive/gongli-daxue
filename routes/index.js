@@ -170,7 +170,7 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
 
     const luckyAnswerKey = Math.floor(Math.random() * 3);
 
-    if (luckyAnswerKey >= 0) {
+    if (luckyAnswerKey === 2) {
       const { emoji, shortPhrase, longPhrase } = getAnswerKeyPhrases();
 
       const answerKeyHtml = "<div class='answer-link'>{{EMOJI}}<a href='http://localhost:3000/answer-key/{{CODE}}'>{{SHORT_PHRASE}}</a> {{LONG_PHRASE}}</div>";

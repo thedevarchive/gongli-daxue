@@ -526,6 +526,37 @@ async function formulateRSQuestion(req, isSimplified, endId = 0) {
     return "Rearrange the sentence fragments into a correct and complete sentence in Chinese. Write your answer in the blank provided. Where necessary, include punctuation. <br />&ensp;&ensp;&nbsp;" + choiceString + "<br />&ensp;&ensp;&ensp;______________________________________________";
 }
 
+async function formulateSCQuestion(req, isSimplified, endId = 0) {
+    const lessonId = Number(req.params.lessonId);
+
+    let question;
+
+    if(endId === 0) {
+        question = await req.db.from("sc_questions")
+        .select("s_question", "s_choices")
+        .where("lesson_id", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1);
+    }
+    else {
+        question = await req.db.from("sc_questions")
+        .select("s_question", "s_choices")
+        .where("lesson_id", ">=", lessonId)
+        .where("lesson_id", "<=", lessonId)
+        .orderByRaw("RAND()")
+        .limit(1);
+    }
+
+    const choices = question[0].s_choices.split(",");
+    const shuffled = shuffleChoices(choices);
+
+    let choiceString = "";
+
+    shuffled.map((sf, index) => (choiceString += "<br />&nbsp;&nbsp;&nbsp;&nbsp;<strong>" + String.fromCharCode(65 + index) + `.</strong> ${sf}`))
+
+    return `<div style="display:flex; flex-direction: column; align-items: flex-start;"><div style="display:flex;"><strong>{{NUMBER}}.</strong><pre style="margin: 0 0 0 0.6em; font-family: inherit;">${question[0].s_question} ${choiceString}</pre></div><div style="padding-left: 2em; margin-top: 0;"></div></div>`;
+}
+
 module.exports = {
     formulateMPQuestionFromChars,
     formulateMPQuestionFromVocab,
@@ -533,5 +564,6 @@ module.exports = {
     formulateFITBQuestion,
     formulateTCQuestion,
     formulateICSQuestion,
-    formulateRSQuestion
+    formulateRSQuestion, 
+    formulateSCQuestion
 }

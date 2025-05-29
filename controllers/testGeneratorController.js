@@ -5,13 +5,14 @@ const {
     formulateFITBQuestion,
     formulateTCQuestion, 
     formulateICSQuestion, 
-    formulateRSQuestion
+    formulateRSQuestion, 
+    formulateSCQuestion
 } = require('./questionsController');
 
 async function getGeneratedQuestions(req) {
     //get selected lesson id and worksheet details from client side
     const lessonId = Number(req.params.lessonId);
-    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, question_format } = req.body;
+    const { questions, match_pinyin, match_meaning, fill_blank, translate_chn, ics, recon_sentence, simple_comp, question_format } = req.body;
 
     //get boolean values for each question type
     const isMP = match_pinyin === "true" ? 1 : 0;
@@ -19,9 +20,10 @@ async function getGeneratedQuestions(req) {
     const isFB = fill_blank === "true" ? 1 : 0;
     const isTC = translate_chn === "true" ? 1 : 0;
     const isICS = ics === "true" ? 1 : 0; 
-    const isRS = recon_sentence === "true" ? 1: 0; 
+    const isRS = recon_sentence === "true" ? 1 : 0; 
+    const isSC = simple_comp === "true" ? 1 : 0; 
 
-    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS + isRS;
+    let numberOfQuestionTypes = isMP + isMM + isFB + isTC + isICS + isRS + isSC;
 
     // ChatGPT provided this handy formula for calculating minimum per type
     // Minimum per type depends on the number of questions and number of question types selected
@@ -53,8 +55,6 @@ async function getGeneratedQuestions(req) {
 
                 //when learner selects both, randomly pick the format for each question
                 if (question_format === "MW") formatSelect = Math.floor(Math.random() * 2);
-
-                //console.log(question_format === "MC" || formatSelect === 1); 
 
                 if (tableSelect === 1)
                     questionsArr.push(await formulateMPQuestionFromVocab(req, true, question_format === "MC" || formatSelect === 1));
@@ -126,7 +126,19 @@ async function getGeneratedQuestions(req) {
                 questionsArr.push(await formulateRSQuestion(req, true));
             }
         } catch (error) {
-            console.error('Error fetching vocab:', error);
+            console.error('Error generating RS questions:', error);
+        }
+        count++;
+    }
+
+    if (Boolean(isSC)) {
+        try {
+            questionsGenerated += questionTypeCounts[count];
+            while (questionsArr.length < questionsGenerated) {
+                questionsArr.push(await formulateSCQuestion(req, true));
+            }
+        } catch (error) {
+            console.error('Error generating SC questions:', error);
         }
         count++;
     }
@@ -171,7 +183,7 @@ async function getGeneratedAPQuestions(req) {
             questionsArr.push(await formulateRSQuestion(req, true, end_lesson));
         }
         else if(questionType === 6 && lessonId >= 8) { //soon
-            //questionsArr.push(await formulateMMQuestion(req, end_lesson, true));
+            //questionsArr.push(await formulateSCQuestion(req, true, end_lesson));
         }
     }
 
