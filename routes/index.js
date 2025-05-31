@@ -82,6 +82,9 @@ router.get("/guides/:lessonId", async (req, res, next) => {
   return res.json({ titles, objectives, vocab, vocabNotes, sampleStc });
 });
 
+//get answer key to the worksheet by code 
+//each lesson has its own unique code so that users would not be able to remember the link to the answer key
+//this is only a temporary solution to learners accessing the keys and a better solution will be implemented in the future 
 router.get("/key/:code", async (req, res, next) => {
   const script = req.query.script || 'simplified'; // fallback to default if not provided
 
@@ -129,6 +132,8 @@ router.get("/key/:code", async (req, res, next) => {
   return res.json({ lesson, chars, vocab, fitb_questions, tc_questions });
 });
 
+//generate worksheet based on lesson ID 
+//and other specifications like number of questions, question format and question type 
 router.post("/worksheets/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
