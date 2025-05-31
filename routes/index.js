@@ -21,13 +21,16 @@ router.get("/lessons", async (req, res, next) => {
   res.json({ lessons });
 });
 
+//get lesson details based on lesson ID 
 router.get("/guides/:lessonId", async (req, res, next) => {
   const script = req.query.script || 'simplified'; // fallback to default if not provided
 
+  //get lesson title in English and Chinese
   const lessonQuery = await req.db.from("lessons")
     .select("eng_title", "s_chn_title")
     .where("id", req.params.lessonId);
 
+  //get objectives from each lesson 
   const objectives = await req.db.from("objectives")
     .select("description")
     .where("lesson_id", req.params.lessonId);
@@ -35,6 +38,8 @@ router.get("/guides/:lessonId", async (req, res, next) => {
   const titles = lessonQuery[0]; 
   let vocab, vocabNotes, sampleStc;
 
+  //get vocabulary, notes and sample sentences from each lesson 
+  //get them in the script requested by user (simplified or traditional Chinese)
   if (script === "simplified") {
     vocab = await req.db.from("vocabulary")
       .select("s_hanzi", "pinyin", "meaning")
