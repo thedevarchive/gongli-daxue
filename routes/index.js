@@ -185,6 +185,7 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
 
     const luckyAnswerKey = Math.floor(Math.random() * 3);
 
+    //randomise occurrence of answer key to encourage users not to depend on it 
     if (luckyAnswerKey === 2) {
       const { emoji, shortPhrase, longPhrase } = getAnswerKeyPhrases();
 
@@ -235,6 +236,10 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
   }
 });
 
+//Create academic performance worksheets
+//These worksheets tests users on 3-5 lessons 
+//Leaners cannot choose the question types they have to be tested on 
+//so learners must be able to answer questions from all question types 
 router.post("/academic-performance/:lessonId", async (req, res, next) => {
   try {
     //generate questions to put on worksheet
