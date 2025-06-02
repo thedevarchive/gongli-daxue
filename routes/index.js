@@ -141,14 +141,19 @@ router.post("/worksheets/:lessonId", async (req, res, next) => {
 
     const numQuestions = Number(req.body.questions);
 
+    //wrap questions in HTML for Puppeteer 
     const questionHtml = questionsArr.map((q, i) => {
       if (i < numQuestions) {
+        //due to the formatting of some questions with <pre>, 
+        //some questions will have {{NUMBER}}
+        //if the template has this, replace {{NUMBER}} with the current item number and wrap question in <div>
+        //otherwise simply wrap the question in <div> 
         if (q.includes("{{NUMBER}}")) return `<div class="question">${q.replace("{{NUMBER}}", i + 1)}</div>`;
         else return `<div class="question"><strong>${i + 1}.</strong> ${q}</div>`;
       }
     }).join("");
 
-    // Step 1: Construct full font path
+    // Construct full font path
     const fontPath = path.resolve(__dirname, 'fonts', 'NotoSansSC-Regular.otf');
     const fontURL = `file://${fontPath}`;
 
