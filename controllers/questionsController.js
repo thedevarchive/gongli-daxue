@@ -27,6 +27,7 @@ function shuffleChoices(array) {
     return array;
 }
 
+//create match pinyin question from vocabulary 
 async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) {
     const lessonId = Number(req.params.lessonId);
 
