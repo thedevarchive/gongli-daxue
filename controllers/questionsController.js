@@ -34,7 +34,9 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) 
     let rightAns;
 
     if (isMC) {
+        //check if endId is 0 (check if this is not an academic performance test)
         if (endId === 0) {
+            //for normal worksheets, only get vocab from selected lesson
             rightAns = await req.db.from("vocabulary")
                 .select("pinyin", "s_hanzi")
                 .whereNotNull("question_phrase") //eliminates character names in vocabulary 
@@ -43,6 +45,7 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) 
                 .limit(1);
         }
         else {
+            //otherwise, pick vocab within the established range of lessons
             rightAns = await req.db.from("vocabulary")
                 .select("pinyin", "s_hanzi")
                 .whereNotNull("question_phrase") //eliminates character names in vocabulary 
