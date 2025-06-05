@@ -64,6 +64,7 @@ async function formulateMPQuestionFromVocab(req, isSimplified, isMC, endId = 0) 
 
         let choiceQuery;
 
+        //get choices depending on if the endId is supplied or not
         if (endId === 0) {
             choiceQuery = await req.db.from("vocabulary")
                 .select("s_hanzi")
